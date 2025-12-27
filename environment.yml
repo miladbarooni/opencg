@@ -1,0 +1,19 @@
+# Conda environment for OpenCG development
+# Create with: conda env create -f environment.yml
+# Activate with: conda activate opencg
+
+name: opencg
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy>=1.20
+  - pandas>=1.5
+  - pytest>=7.0
+  - pytest-cov>=4.0
+  - mypy>=1.0
+  - pip
+  - pip:
+    - ruff>=0.1.0
+    - highspy>=1.5  # HiGHS LP solver

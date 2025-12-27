@@ -1,0 +1,93 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "pybind11>=2.11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "opencg"
+version = "0.1.0"
+description = "Open-Source Column Generation Framework for Operations Research"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "OpenCG Contributors"}
+]
+keywords = [
+    "column-generation",
+    "branch-and-price",
+    "operations-research",
+    "optimization",
+    "crew-scheduling",
+    "vehicle-routing",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.20",
+    "highspy>=1.5",  # HiGHS LP solver (default)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+notebooks = [
+    "jupyter>=1.0",
+    "matplotlib>=3.5",
+]
+full = [
+    "opencg[dev,notebooks]",
+    "pandas>=1.5",  # For data manipulation
+    "networkx>=3.0",  # For graph visualization
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/opencg"
+Documentation = "https://opencg.readthedocs.io"
+Repository = "https://github.com/yourusername/opencg"
+Issues = "https://github.com/yourusername/opencg/issues"
+
+[tool.scikit-build]
+cmake.minimum-version = "3.15"
+cmake.build-type = "Release"
+wheel.packages = ["opencg"]
+build-dir = "build/{wheel_tag}"
+
+# CMake args for pybind11
+cmake.args = [
+    "-DBUILD_TESTS=OFF",
+    "-DBUILD_BENCHMARKS=OFF",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # Line too long (we use 88 but some docstrings may be longer)
