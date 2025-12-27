@@ -45,7 +45,7 @@ A high-performance, extensible framework for solving optimization problems using
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/opencg.git
+git clone https://github.com/miladbarooni/opencg.git
 cd opencg
 
 # Create conda environment (recommended)
@@ -244,9 +244,9 @@ If you use OpenCG in your research, please cite:
 ```bibtex
 @software{opencg2024,
   title = {OpenCG: Open-Source Column Generation Framework},
-  author = {Contributors},
+  author = {Barooni, Milad},
   year = {2024},
-  url = {https://github.com/yourusername/opencg}
+  url = {https://github.com/miladbarooni/opencg}
 }
 ```
 

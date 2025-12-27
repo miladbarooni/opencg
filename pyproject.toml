@@ -56,10 +56,10 @@ full = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/opencg"
+Homepage = "https://github.com/miladbarooni/opencg"
 Documentation = "https://opencg.readthedocs.io"
-Repository = "https://github.com/yourusername/opencg"
-Issues = "https://github.com/yourusername/opencg/issues"
+Repository = "https://github.com/miladbarooni/opencg"
+Issues = "https://github.com/miladbarooni/opencg/issues"
 
 [tool.scikit-build]
 cmake.minimum-version = "3.15"
