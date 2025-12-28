@@ -33,6 +33,8 @@ A high-performance, extensible framework for solving optimization problems using
 └───────────────────────────────────────────────────────────────┘
 ```
 
+**See [Architecture Guide](docs/ARCHITECTURE.md)** for the complete picture: how components connect, the CG loop, and customization points.
+
 ## Installation
 
 ### Prerequisites
