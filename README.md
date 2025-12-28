@@ -166,7 +166,22 @@ See the `examples/notebooks/` directory for detailed tutorials:
 3. **03_crew_pairing.ipynb** - Airline crew scheduling with multiple resources
 4. **04_parallel_pricing.ipynb** - Parallel pricing performance
 
+## Documentation
+
+For detailed guides, see the [docs/](docs/) directory:
+
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](QUICKSTART.md) | Get started in 30 minutes |
+| [Building Networks](docs/building_networks.md) | Construct time-space networks for your problem |
+| [Custom Resources](docs/custom_resources.md) | Create new resource constraints (time, capacity, skills) |
+| [Custom Pricing](docs/custom_pricing.md) | Implement your own SPPRC pricing algorithms |
+| [Custom Master](docs/custom_master.md) | Use different LP/MIP solvers (Gurobi, CPLEX) |
+| [Custom Applications](docs/custom_application.md) | Model new optimization problems |
+
 ## Extending OpenCG
+
+OpenCG is designed to be extensible. Here's a quick preview - see [docs/](docs/) for complete guides.
 
 ### Custom Resource Type
 
@@ -195,6 +210,8 @@ class MyPricing(PricingProblem):
         columns = self._find_columns()
         return PricingSolution(columns=columns, ...)
 ```
+
+See [Custom Pricing Guide](docs/custom_pricing.md) for complete examples including knapsack pricing and MIP-based pricing.
 
 ## Project Structure
 
