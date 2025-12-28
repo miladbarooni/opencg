@@ -6,9 +6,9 @@ This module provides instance classes for vehicle routing problems:
 - VRPTWInstance: VRP with Time Windows
 """
 
-from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
 import math
+from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -29,9 +29,9 @@ class CVRPInstance:
         num_vehicles: Optional limit on number of vehicles (None = unlimited)
         name: Optional instance name
     """
-    depot: Tuple[float, float]
-    customers: List[Tuple[float, float]]
-    demands: List[float]
+    depot: tuple[float, float]
+    customers: list[tuple[float, float]]
+    demands: list[float]
     vehicle_capacity: float
     num_vehicles: Optional[int] = None
     name: Optional[str] = None
@@ -79,7 +79,7 @@ class CVRPInstance:
         dy = loc_i[1] - loc_j[1]
         return math.sqrt(dx * dx + dy * dy)
 
-    def distance_matrix(self) -> List[List[float]]:
+    def distance_matrix(self) -> list[list[float]]:
         """
         Compute full distance matrix.
 
@@ -120,7 +120,7 @@ class CVRPInstance:
         import os
         name = os.path.splitext(os.path.basename(filepath))[0]
 
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             lines = [line.strip() for line in f.readlines()]
 
         # Find vehicle capacity line (after VEHICLE header)
@@ -234,14 +234,13 @@ class CVRPInstance:
         import os
         name = os.path.splitext(os.path.basename(filepath))[0]
 
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             content = f.read()
 
         lines = content.strip().split('\n')
 
         # Parse header
         capacity = None
-        dimension = None
 
         coords = {}
         demands_dict = {}
@@ -259,7 +258,7 @@ class CVRPInstance:
             elif line.startswith('CAPACITY'):
                 capacity = float(line.split(':')[1].strip())
             elif line.startswith('DIMENSION'):
-                dimension = int(line.split(':')[1].strip())
+                int(line.split(':')[1].strip())
             elif line == 'NODE_COORD_SECTION':
                 section = 'coords'
             elif line == 'DEMAND_SECTION':
@@ -339,13 +338,13 @@ class VRPTWInstance:
         speed: Vehicle speed for travel time calculation (default: 1.0)
         name: Optional instance name
     """
-    depot: Tuple[float, float]
-    customers: List[Tuple[float, float]]
-    demands: List[float]
-    time_windows: List[Tuple[float, float]]  # (earliest, latest) per customer
-    service_times: List[float]
+    depot: tuple[float, float]
+    customers: list[tuple[float, float]]
+    demands: list[float]
+    time_windows: list[tuple[float, float]]  # (earliest, latest) per customer
+    service_times: list[float]
     vehicle_capacity: float
-    depot_time_window: Tuple[float, float] = (0.0, float('inf'))
+    depot_time_window: tuple[float, float] = (0.0, float('inf'))
     num_vehicles: Optional[int] = None
     speed: float = 1.0
     name: Optional[str] = None
@@ -363,9 +362,9 @@ class VRPTWInstance:
         if any(d > self.vehicle_capacity for d in self.demands):
             raise ValueError("no customer demand can exceed vehicle capacity")
         # Validate time windows
-        for i, (e, l) in enumerate(self.time_windows):
-            if e > l:
-                raise ValueError(f"Invalid time window for customer {i}: [{e}, {l}]")
+        for i, (early, late) in enumerate(self.time_windows):
+            if early > late:
+                raise ValueError(f"Invalid time window for customer {i}: [{early}, {late}]")
 
     @property
     def num_customers(self) -> int:
@@ -403,7 +402,7 @@ class VRPTWInstance:
         """
         return self.distance(i, j) / self.speed
 
-    def get_time_window(self, i: int) -> Tuple[float, float]:
+    def get_time_window(self, i: int) -> tuple[float, float]:
         """
         Get time window for node i.
 
@@ -446,7 +445,7 @@ class VRPTWInstance:
         import os
         name = os.path.splitext(os.path.basename(filepath))[0]
 
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             lines = [line.strip() for line in f.readlines()]
 
         # Find vehicle capacity line (after VEHICLE header)

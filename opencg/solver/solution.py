@@ -7,7 +7,7 @@ of the column generation algorithm.
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from opencg.core.column import Column
 
@@ -89,7 +89,7 @@ class CGSolution:
     ip_objective: Optional[float] = None
 
     # Solution columns (those with positive value)
-    columns: List[Column] = field(default_factory=list)
+    columns: list[Column] = field(default_factory=list)
 
     # Statistics
     total_columns: int = 0
@@ -99,7 +99,7 @@ class CGSolution:
     pricing_time: float = 0.0
 
     # Iteration history
-    iteration_history: List[CGIteration] = field(default_factory=list)
+    iteration_history: list[CGIteration] = field(default_factory=list)
 
     # Optimality gap
     gap: Optional[float] = None
@@ -108,7 +108,7 @@ class CGSolution:
     lower_bound: Optional[float] = None
 
     # Additional info
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # =========================================================================
     # Properties
@@ -151,7 +151,7 @@ class CGSolution:
     # Methods
     # =========================================================================
 
-    def get_column_values(self) -> Dict[int, float]:
+    def get_column_values(self) -> dict[int, float]:
         """
         Get mapping from column ID to value.
 
@@ -164,7 +164,7 @@ class CGSolution:
             if col.column_id is not None and col.value is not None
         }
 
-    def get_convergence_history(self) -> List[float]:
+    def get_convergence_history(self) -> list[float]:
         """
         Get objective values over iterations.
 

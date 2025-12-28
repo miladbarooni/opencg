@@ -17,16 +17,16 @@ having a few dominant source arcs take all the beam budget.
 """
 
 import time
-from typing import Dict, List, Optional, Set
 from collections import defaultdict
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -35,9 +35,15 @@ from opencg.pricing.base import (
 try:
     from opencg._core import (
         HAS_CPP_BACKEND,
-        Network as CppNetwork,
+    )
+    from opencg._core import (
         LabelingAlgorithm as CppLabelingAlgorithm,
+    )
+    from opencg._core import (
         LabelingConfig as CppLabelingConfig,
+    )
+    from opencg._core import (
+        Network as CppNetwork,
     )
 except ImportError:
     HAS_CPP_BACKEND = False
@@ -84,7 +90,7 @@ class PerSourcePricing(PricingProblem):
         self._time_per_source = time_per_source
 
         # Get source arcs with their bases
-        self._source_arcs: List[tuple] = []  # (arc_index, base)
+        self._source_arcs: list[tuple] = []  # (arc_index, base)
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
                 base = arc.get_attribute('base')
@@ -92,7 +98,7 @@ class PerSourcePricing(PricingProblem):
                     self._source_arcs.append((arc.index, base))
 
         # Get sink arcs by base
-        self._sink_arcs_by_base: Dict[str, Set[int]] = defaultdict(set)
+        self._sink_arcs_by_base: dict[str, set[int]] = defaultdict(set)
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
                 base = arc.get_attribute('base')
@@ -115,8 +121,8 @@ class PerSourcePricing(PricingProblem):
         """Run per-source-arc pricing with isolated networks."""
         start_time = time.time()
 
-        all_columns: List[Column] = []
-        covered_items: Set[int] = set()
+        all_columns: list[Column] = []
+        covered_items: set[int] = set()
         best_rc = None
         total_labels = 0
         total_dominated = 0
@@ -132,7 +138,7 @@ class PerSourcePricing(PricingProblem):
 
             # Build isolated network for this source arc
             cpp_network = CppNetwork()
-            cpp_arc_to_py: Dict[int, int] = {}
+            cpp_arc_to_py: dict[int, int] = {}
 
             # Add all nodes
             for i in range(network.num_nodes):
@@ -237,7 +243,7 @@ class PerSourcePricing(PricingProblem):
     def _convert_cpp_label(
         self,
         cpp_label,
-        arc_map: Dict[int, int],
+        arc_map: dict[int, int],
         base: str
     ) -> Optional[Column]:
         """Convert C++ label to Python Column."""

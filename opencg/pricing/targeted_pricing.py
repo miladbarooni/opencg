@@ -13,16 +13,16 @@ Strategy:
 """
 
 import time
-from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -31,9 +31,15 @@ from opencg.pricing.base import (
 try:
     from opencg._core import (
         HAS_CPP_BACKEND,
-        Network as CppNetwork,
+    )
+    from opencg._core import (
         LabelingAlgorithm as CppLabelingAlgorithm,
+    )
+    from opencg._core import (
         LabelingConfig as CppLabelingConfig,
+    )
+    from opencg._core import (
+        Network as CppNetwork,
     )
 except ImportError:
     HAS_CPP_BACKEND = False
@@ -99,12 +105,12 @@ class TargetedPricing(PricingProblem):
 
         # Build full network (for normal pricing)
         self._full_network: Optional[CppNetwork] = None
-        self._full_arc_map: Dict[int, int] = {}
+        self._full_arc_map: dict[int, int] = {}
         self._build_full_network()
 
         # Per-base networks for targeted pricing
-        self._base_networks: Dict[str, CppNetwork] = {}
-        self._base_arc_maps: Dict[str, Dict[int, int]] = {}
+        self._base_networks: dict[str, CppNetwork] = {}
+        self._base_arc_maps: dict[str, dict[int, int]] = {}
         for base in self._bases:
             self._build_base_network(base)
 
@@ -112,7 +118,7 @@ class TargetedPricing(PricingProblem):
         self._flight_to_bases = self._compute_flight_bases()
 
         # Track uncovered flights from previous iteration
-        self._uncovered_flights: Set[int] = set()
+        self._uncovered_flights: set[int] = set()
 
     def _find_source_sink(self) -> None:
         for i in range(self._problem.network.num_nodes):
@@ -124,7 +130,7 @@ class TargetedPricing(PricingProblem):
             elif node.node_type == NodeType.SINK:
                 self._sink_idx = i
 
-    def _find_bases(self) -> List[str]:
+    def _find_bases(self) -> list[str]:
         bases = set()
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -133,7 +139,7 @@ class TargetedPricing(PricingProblem):
                     bases.add(base)
         return sorted(bases)
 
-    def _find_base_source_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_source_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -142,7 +148,7 @@ class TargetedPricing(PricingProblem):
                     result[base].add(arc.index)
         return result
 
-    def _find_base_sink_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_sink_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
@@ -155,7 +161,7 @@ class TargetedPricing(PricingProblem):
         """Build full C++ network (no base filtering)."""
         py_network = self._problem.network
         cpp_network = CppNetwork()
-        cpp_arc_to_py: Dict[int, int] = {}
+        cpp_arc_to_py: dict[int, int] = {}
 
         # Add all nodes
         for i in range(py_network.num_nodes):
@@ -194,7 +200,7 @@ class TargetedPricing(PricingProblem):
         """Build C++ network for a specific base."""
         py_network = self._problem.network
         cpp_network = CppNetwork()
-        cpp_arc_to_py: Dict[int, int] = {}
+        cpp_arc_to_py: dict[int, int] = {}
 
         # Add all nodes
         for i in range(py_network.num_nodes):
@@ -236,7 +242,7 @@ class TargetedPricing(PricingProblem):
         self._base_networks[base] = cpp_network
         self._base_arc_maps[base] = cpp_arc_to_py
 
-    def _compute_flight_bases(self) -> Dict[int, List[str]]:
+    def _compute_flight_bases(self) -> dict[int, list[str]]:
         """For each flight arc, determine which bases can cover it."""
         result = defaultdict(list)
 
@@ -253,7 +259,7 @@ class TargetedPricing(PricingProblem):
 
         return dict(result)
 
-    def set_uncovered_flights(self, uncovered: Set[int]) -> None:
+    def set_uncovered_flights(self, uncovered: set[int]) -> None:
         """Set the flights that need targeted pricing."""
         self._uncovered_flights = set(uncovered)
 
@@ -265,8 +271,8 @@ class TargetedPricing(PricingProblem):
         """Run targeted pricing."""
         start_time = time.time()
 
-        all_columns: List[Column] = []
-        covered_items: Set[int] = set()
+        all_columns: list[Column] = []
+        covered_items: set[int] = set()
         best_rc = None
         total_labels = 0
         total_dominated = 0
@@ -336,7 +342,7 @@ class TargetedPricing(PricingProblem):
             iterations=len(all_columns),
         )
 
-    def _run_base_pricing(self, base: str) -> Tuple[List[Column], int, int]:
+    def _run_base_pricing(self, base: str) -> tuple[list[Column], int, int]:
         """Run normal pricing for a base."""
         if base not in self._base_networks:
             return [], 0, 0
@@ -442,7 +448,7 @@ class TargetedPricing(PricingProblem):
     def _convert_cpp_label(
         self,
         cpp_label,
-        arc_map: Dict[int, int],
+        arc_map: dict[int, int],
         base: str
     ) -> Optional[Column]:
         """Convert C++ label to Python Column."""

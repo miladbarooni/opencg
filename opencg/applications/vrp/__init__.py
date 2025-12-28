@@ -47,8 +47,12 @@ Usage:
 from opencg.applications.vrp.instance import CVRPInstance, VRPTWInstance
 from opencg.applications.vrp.resources import CapacityResource, TimeResource
 from opencg.applications.vrp.solver import (
-    solve_cvrp, CVRPSolution, CVRPConfig,
-    solve_vrptw, VRPTWSolution, VRPTWConfig,
+    CVRPConfig,
+    CVRPSolution,
+    VRPTWConfig,
+    VRPTWSolution,
+    solve_cvrp,
+    solve_vrptw,
 )
 
 __all__ = [

@@ -10,15 +10,15 @@ Uses Boost's high-performance label-setting algorithm.
 """
 
 import time
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -74,8 +74,8 @@ class MultiBaseBoostPricing(PricingProblem):
                 self._resource_limits.append(r.max_value)
 
         # Build per-base Boost solvers
-        self._base_solvers: Dict[str, BoostSPPRCSolver] = {}
-        self._base_arc_maps: Dict[str, Dict[int, int]] = {}  # boost_arc -> py_arc
+        self._base_solvers: dict[str, BoostSPPRCSolver] = {}
+        self._base_arc_maps: dict[str, dict[int, int]] = {}  # boost_arc -> py_arc
 
         for base in self._bases:
             self._build_base_solver(base)
@@ -90,7 +90,7 @@ class MultiBaseBoostPricing(PricingProblem):
             elif node.node_type == NodeType.SINK:
                 self._sink_idx = i
 
-    def _find_bases(self) -> List[str]:
+    def _find_bases(self) -> list[str]:
         bases = set()
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -99,7 +99,7 @@ class MultiBaseBoostPricing(PricingProblem):
                     bases.add(base)
         return sorted(bases)
 
-    def _find_base_source_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_source_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -108,7 +108,7 @@ class MultiBaseBoostPricing(PricingProblem):
                     result[base].add(arc.index)
         return result
 
-    def _find_base_sink_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_sink_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
@@ -129,11 +129,11 @@ class MultiBaseBoostPricing(PricingProblem):
         )
 
         # Track vertex mapping (py -> boost)
-        py_to_boost_node: Dict[int, int] = {}
+        py_to_boost_node: dict[int, int] = {}
 
         # Add all nodes
         for i in range(py_network.num_nodes):
-            node = py_network.get_node(i)
+            py_network.get_node(i)
             solver.add_vertex(i)
             py_to_boost_node[i] = i
 
@@ -141,7 +141,7 @@ class MultiBaseBoostPricing(PricingProblem):
         solver.set_sink(self._sink_idx)
 
         # Add arcs (filtering source/sink by base)
-        boost_arc_to_py: Dict[int, int] = {}
+        boost_arc_to_py: dict[int, int] = {}
         boost_arc_idx = 0
 
         for arc in py_network.arcs:
@@ -205,7 +205,7 @@ class MultiBaseBoostPricing(PricingProblem):
         solver.set_sink(self._sink_idx)
 
         # Add arcs with updated reduced costs
-        boost_arc_to_py: Dict[int, int] = {}
+        boost_arc_to_py: dict[int, int] = {}
         boost_arc_idx = 0
 
         for arc in py_network.arcs:
@@ -251,7 +251,7 @@ class MultiBaseBoostPricing(PricingProblem):
         """Run pricing for each base and combine results."""
         start_time = time.time()
 
-        all_columns: List[Column] = []
+        all_columns: list[Column] = []
         best_rc = None
         total_labels = 0
 
@@ -310,7 +310,7 @@ class MultiBaseBoostPricing(PricingProblem):
     def _convert_path_to_column(
         self,
         path,
-        arc_map: Dict[int, int],
+        arc_map: dict[int, int],
         base: str
     ) -> Optional[Column]:
         """Convert Boost path to Python Column."""

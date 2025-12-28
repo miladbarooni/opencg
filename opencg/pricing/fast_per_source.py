@@ -16,19 +16,19 @@ Parallel execution:
 - C++ labeling releases GIL, so threads run in true parallel
 """
 
+import os
 import time
-from typing import Dict, List, Optional, Set, Tuple
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import os
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -37,9 +37,15 @@ from opencg.pricing.base import (
 try:
     from opencg._core import (
         HAS_CPP_BACKEND,
-        Network as CppNetwork,
+    )
+    from opencg._core import (
         LabelingAlgorithm as CppLabelingAlgorithm,
+    )
+    from opencg._core import (
         LabelingConfig as CppLabelingConfig,
+    )
+    from opencg._core import (
+        Network as CppNetwork,
     )
 except ImportError:
     HAS_CPP_BACKEND = False
@@ -90,10 +96,10 @@ class FastPerSourcePricing(PricingProblem):
         self._num_threads = num_threads if num_threads > 0 else os.cpu_count() or 1
 
         # Priority items - columns covering these get boosted in selection
-        self._priority_items: Set[int] = set()
+        self._priority_items: set[int] = set()
 
         # Get source arcs with their bases
-        self._source_arcs: List[Tuple[int, str]] = []
+        self._source_arcs: list[tuple[int, str]] = []
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
                 base = arc.get_attribute('base')
@@ -101,7 +107,7 @@ class FastPerSourcePricing(PricingProblem):
                     self._source_arcs.append((arc.index, base))
 
         # Get sink arcs by base
-        self._sink_arcs_by_base: Dict[str, Set[int]] = defaultdict(set)
+        self._sink_arcs_by_base: dict[str, set[int]] = defaultdict(set)
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
                 base = arc.get_attribute('base')
@@ -109,20 +115,20 @@ class FastPerSourcePricing(PricingProblem):
                     self._sink_arcs_by_base[base].add(arc.index)
 
         # Get numeric resources
-        self._numeric_resources: List[str] = []
-        self._resource_limits: List[float] = []
+        self._numeric_resources: list[str] = []
+        self._resource_limits: list[float] = []
         for r in problem.resources:
             if hasattr(r, 'max_value'):
                 self._numeric_resources.append(r.name)
                 self._resource_limits.append(r.max_value)
 
         # Prebuild all per-source networks and algorithms
-        self._source_networks: Dict[int, CppNetwork] = {}
-        self._source_algorithms: Dict[int, CppLabelingAlgorithm] = {}
-        self._source_arc_maps: Dict[int, Dict[int, int]] = {}
+        self._source_networks: dict[int, CppNetwork] = {}
+        self._source_algorithms: dict[int, CppLabelingAlgorithm] = {}
+        self._source_arc_maps: dict[int, dict[int, int]] = {}
 
         # Mapping from flight arc index to source arcs that include it
-        self._flight_to_sources: Dict[int, Set[int]] = defaultdict(set)
+        self._flight_to_sources: dict[int, set[int]] = defaultdict(set)
 
         print(f"FastPerSourcePricing: prebuilding {len(self._source_arcs)} networks...")
         build_start = time.time()
@@ -135,7 +141,7 @@ class FastPerSourcePricing(PricingProblem):
         network = self._problem.network
 
         cpp_network = CppNetwork()
-        cpp_arc_to_py: Dict[int, int] = {}
+        cpp_arc_to_py: dict[int, int] = {}
 
         # Add all nodes
         for i in range(network.num_nodes):
@@ -204,7 +210,7 @@ class FastPerSourcePricing(PricingProblem):
             if source_arc_idx in self._source_algorithms:
                 self._source_algorithms[source_arc_idx].set_dual_values(self._dual_values)
 
-    def set_priority_items(self, items: Set[int]) -> None:
+    def set_priority_items(self, items: set[int]) -> None:
         """Set items that should be prioritized for coverage.
 
         Columns covering these items will be preferred during column selection.
@@ -221,7 +227,7 @@ class FastPerSourcePricing(PricingProblem):
 
     def _solve_single_source(
         self, source_arc_idx: int, base: str
-    ) -> Tuple[List[Column], int, int]:
+    ) -> tuple[list[Column], int, int]:
         """
         Solve labeling for a single source arc.
 
@@ -280,8 +286,8 @@ class FastPerSourcePricing(PricingProblem):
         """
         start_time = time.time()
 
-        all_columns: List[Column] = []
-        covered_items: Set[int] = set()
+        all_columns: list[Column] = []
+        covered_items: set[int] = set()
         best_rc = None
         total_labels = 0
         total_dominated = 0
@@ -372,8 +378,8 @@ class FastPerSourcePricing(PricingProblem):
         """
         start_time = time.time()
 
-        all_columns: List[Column] = []
-        covered_items: Set[int] = set()
+        all_columns: list[Column] = []
+        covered_items: set[int] = set()
         best_rc = None
         total_labels = 0
         total_dominated = 0
@@ -434,7 +440,7 @@ class FastPerSourcePricing(PricingProblem):
     def _convert_cpp_label(
         self,
         cpp_label,
-        arc_map: Dict[int, int],
+        arc_map: dict[int, int],
         base: str
     ) -> Optional[Column]:
         """Convert C++ label to Python Column."""

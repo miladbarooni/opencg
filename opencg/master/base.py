@@ -35,11 +35,11 @@ Example:
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Optional
 
 from opencg.core.column import Column
-from opencg.core.problem import Problem, CoverType
-from opencg.master.solution import MasterSolution, SolutionStatus
+from opencg.core.problem import Problem
+from opencg.master.solution import MasterSolution
 
 
 @dataclass
@@ -73,7 +73,7 @@ class StabilizationConfig:
     smoothing_alpha: float = 0.5  # alpha * current + (1-alpha) * previous
 
     # Internal state
-    center: Dict[int, float] = field(default_factory=dict)
+    center: dict[int, float] = field(default_factory=dict)
 
 
 class MasterProblem(ABC):
@@ -127,16 +127,16 @@ class MasterProblem(ABC):
         self._stabilization = StabilizationConfig()
 
         # Column tracking
-        self._columns: List[Column] = []
-        self._column_id_to_index: Dict[int, int] = {}
+        self._columns: list[Column] = []
+        self._column_id_to_index: dict[int, int] = {}
 
         # Item ID to constraint index mapping
-        self._item_to_constraint_idx: Dict[int, int] = {}
+        self._item_to_constraint_idx: dict[int, int] = {}
         for idx, constraint in enumerate(problem.cover_constraints):
             self._item_to_constraint_idx[constraint.item_id] = idx
 
         # Branching state: column_id -> (lower_bound, upper_bound)
-        self._column_bounds: Dict[int, tuple] = {}
+        self._column_bounds: dict[int, tuple] = {}
 
         # Build the model
         self._build_model()
@@ -161,7 +161,7 @@ class MasterProblem(ABC):
         return len(self._problem.cover_constraints)
 
     @property
-    def columns(self) -> List[Column]:
+    def columns(self) -> list[Column]:
         """List of columns in the master problem."""
         return self._columns.copy()
 
@@ -243,7 +243,7 @@ class MasterProblem(ABC):
         pass
 
     @abstractmethod
-    def _get_dual_values_impl(self) -> Dict[int, float]:
+    def _get_dual_values_impl(self) -> dict[int, float]:
         """
         Extract dual values from the solver.
 
@@ -285,7 +285,7 @@ class MasterProblem(ABC):
 
         return idx
 
-    def add_columns(self, columns: List[Column]) -> List[int]:
+    def add_columns(self, columns: list[Column]) -> list[int]:
         """
         Add multiple columns to the master problem.
 
@@ -390,7 +390,7 @@ class MasterProblem(ABC):
     # Public API - Dual Values
     # =========================================================================
 
-    def get_dual_values(self) -> Dict[int, float]:
+    def get_dual_values(self) -> dict[int, float]:
         """
         Get dual values for pricing.
 
@@ -406,7 +406,7 @@ class MasterProblem(ABC):
 
         return raw_duals
 
-    def get_raw_dual_values(self) -> Dict[int, float]:
+    def get_raw_dual_values(self) -> dict[int, float]:
         """
         Get dual values without stabilization.
 
@@ -446,7 +446,7 @@ class MasterProblem(ABC):
         self._stabilization.method = 'none'
         self._stabilization.center.clear()
 
-    def update_stabilization_center(self, duals: Dict[int, float]) -> None:
+    def update_stabilization_center(self, duals: dict[int, float]) -> None:
         """
         Update the stabilization center.
 
@@ -509,7 +509,7 @@ class MasterProblem(ABC):
         if column_id in self._column_bounds:
             del self._column_bounds[column_id]
 
-    def get_fixed_columns(self) -> Dict[int, float]:
+    def get_fixed_columns(self) -> dict[int, float]:
         """
         Get columns that are fixed to a value.
 
@@ -550,7 +550,7 @@ class MasterProblem(ABC):
 
     def add_cut(
         self,
-        coefficients: Dict[int, float],
+        coefficients: dict[int, float],
         sense: str,
         rhs: float
     ) -> int:
@@ -616,7 +616,7 @@ class MasterProblem(ABC):
 
     def _add_cut_impl(
         self,
-        coefficients: Dict[int, float],
+        coefficients: dict[int, float],
         sense: str,
         rhs: float
     ) -> int:
@@ -699,7 +699,7 @@ class MasterProblem(ABC):
     # Internal Methods
     # =========================================================================
 
-    def _apply_stabilization(self, raw_duals: Dict[int, float]) -> Dict[int, float]:
+    def _apply_stabilization(self, raw_duals: dict[int, float]) -> dict[int, float]:
         """
         Apply dual stabilization.
 
@@ -723,7 +723,7 @@ class MasterProblem(ABC):
         else:
             return raw_duals
 
-    def _apply_boxstep(self, raw_duals: Dict[int, float]) -> Dict[int, float]:
+    def _apply_boxstep(self, raw_duals: dict[int, float]) -> dict[int, float]:
         """Apply boxstep stabilization."""
         delta = self._stabilization.boxstep_delta
         center = self._stabilization.center
@@ -739,7 +739,7 @@ class MasterProblem(ABC):
 
         return stabilized
 
-    def _apply_smoothing(self, raw_duals: Dict[int, float]) -> Dict[int, float]:
+    def _apply_smoothing(self, raw_duals: dict[int, float]) -> dict[int, float]:
         """Apply smoothing stabilization."""
         alpha = self._stabilization.smoothing_alpha
         center = self._stabilization.center
@@ -779,7 +779,7 @@ class MasterProblem(ABC):
     def compute_reduced_cost(
         self,
         column: Column,
-        dual_values: Dict[int, float]
+        dual_values: dict[int, float]
     ) -> float:
         """
         Compute the reduced cost of a column.

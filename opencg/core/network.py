@@ -28,11 +28,11 @@ The C++ version will use:
 - Optional: CSR format for even better cache performance
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Optional
 
-from opencg.core.node import Node, NodeType
 from opencg.core.arc import Arc, ArcType
+from opencg.core.node import Node, NodeType
 
 
 class Network:
@@ -82,15 +82,15 @@ class Network:
     def __init__(self):
         """Create an empty network."""
         # Storage
-        self._nodes: List[Node] = []
-        self._arcs: List[Arc] = []
+        self._nodes: list[Node] = []
+        self._arcs: list[Arc] = []
 
         # Adjacency lists (node index -> list of arc indices)
-        self._outgoing: List[List[int]] = []
-        self._incoming: List[List[int]] = []
+        self._outgoing: list[list[int]] = []
+        self._incoming: list[list[int]] = []
 
         # Name to index mapping for lookup
-        self._node_name_to_index: Dict[str, int] = {}
+        self._node_name_to_index: dict[str, int] = {}
 
         # Special nodes
         self._source_index: Optional[int] = None
@@ -111,12 +111,12 @@ class Network:
         return len(self._arcs)
 
     @property
-    def nodes(self) -> List[Node]:
+    def nodes(self) -> list[Node]:
         """List of all nodes (read-only view)."""
         return self._nodes
 
     @property
-    def arcs(self) -> List[Arc]:
+    def arcs(self) -> list[Arc]:
         """List of all arcs (read-only view)."""
         return self._arcs
 
@@ -270,7 +270,7 @@ class Network:
         source: int,
         target: int,
         cost: float,
-        resource_consumption: Optional[Dict[str, float]] = None,
+        resource_consumption: Optional[dict[str, float]] = None,
         arc_type: ArcType = ArcType.GENERIC,
         **attributes
     ) -> int:
@@ -364,7 +364,7 @@ class Network:
         for arc_index in self._incoming[node]:
             yield self._arcs[arc_index]
 
-    def outgoing_arc_indices(self, node: int) -> List[int]:
+    def outgoing_arc_indices(self, node: int) -> list[int]:
         """
         Get list of outgoing arc indices from a node.
 
@@ -376,7 +376,7 @@ class Network:
         """
         return self._outgoing[node]
 
-    def incoming_arc_indices(self, node: int) -> List[int]:
+    def incoming_arc_indices(self, node: int) -> list[int]:
         """
         Get list of incoming arc indices to a node.
 
@@ -433,15 +433,15 @@ class Network:
             if arc.arc_type == arc_type:
                 yield arc
 
-    def get_bases(self) -> List[Node]:
+    def get_bases(self) -> list[Node]:
         """Get list of base nodes."""
         return list(self.nodes_of_type(NodeType.BASE))
 
-    def get_flights(self) -> List[Arc]:
+    def get_flights(self) -> list[Arc]:
         """Get list of flight arcs."""
         return list(self.arcs_of_type(ArcType.FLIGHT))
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """
         Validate the network structure.
 

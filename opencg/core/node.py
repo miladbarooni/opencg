@@ -25,7 +25,7 @@ Attributes will be stored separately for cache efficiency.
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 
 
 class NodeType(Enum):
@@ -101,7 +101,7 @@ class Node:
     index: int
     name: str
     node_type: NodeType = NodeType.GENERIC
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def get_attribute(self, key: str, default: Any = None) -> Any:
         """
@@ -127,12 +127,12 @@ class Node:
         self.attributes[key] = value
 
     @property
-    def time_window(self) -> Optional[Tuple[float, float]]:
+    def time_window(self) -> Optional[tuple[float, float]]:
         """Get time window if set, else None."""
         return self.attributes.get('time_window')
 
     @time_window.setter
-    def time_window(self, value: Tuple[float, float]) -> None:
+    def time_window(self, value: tuple[float, float]) -> None:
         """Set time window as (earliest, latest)."""
         self.attributes['time_window'] = value
 

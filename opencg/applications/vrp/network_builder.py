@@ -4,14 +4,14 @@ VRP network builder.
 Constructs the time-space network for VRP column generation pricing.
 """
 
-from typing import List, Dict, Tuple, Union
+
+from opencg.applications.vrp.instance import CVRPInstance, VRPTWInstance
+from opencg.core.arc import ArcType
 from opencg.core.network import Network
 from opencg.core.node import NodeType
-from opencg.core.arc import ArcType
-from opencg.applications.vrp.instance import CVRPInstance, VRPTWInstance
 
 
-def build_vrp_network(instance: CVRPInstance) -> Tuple[Network, Dict[int, int]]:
+def build_vrp_network(instance: CVRPInstance) -> tuple[Network, dict[int, int]]:
     """
     Build a network for CVRP pricing.
 
@@ -153,7 +153,7 @@ def build_vrp_network(instance: CVRPInstance) -> Tuple[Network, Dict[int, int]]:
 
 def build_vrp_network_with_depot_copies(
     instance: CVRPInstance
-) -> Tuple[Network, Dict[int, int]]:
+) -> tuple[Network, dict[int, int]]:
     """
     Build a network with separate depot copies for start/end.
 
@@ -279,7 +279,7 @@ def build_vrp_network_with_depot_copies(
     return network, customer_node_map
 
 
-def build_vrptw_network(instance: VRPTWInstance) -> Tuple[Network, Dict[int, int]]:
+def build_vrptw_network(instance: VRPTWInstance) -> tuple[Network, dict[int, int]]:
     """
     Build a network for VRPTW (VRP with Time Windows) pricing.
 

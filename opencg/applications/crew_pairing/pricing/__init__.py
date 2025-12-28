@@ -21,10 +21,9 @@ Available Algorithms:
 # These will be moved to this package in the future
 
 from opencg.pricing.multibase import (
-    MultiBasePricingAlgorithm,
     BaseRestrictedLabelingAlgorithm,
+    MultiBasePricingAlgorithm,
 )
-
 from opencg.pricing.per_source_pricing import PerSourcePricing
 
 try:

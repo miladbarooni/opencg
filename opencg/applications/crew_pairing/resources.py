@@ -4,7 +4,7 @@ Crew pairing specific resources.
 These resources enforce constraints specific to airline crew scheduling.
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from opencg.core.resource import Resource
 

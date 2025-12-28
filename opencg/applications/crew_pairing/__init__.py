@@ -70,23 +70,22 @@ Advanced Usage:
     pricing = FastPerSourcePricing(problem, max_labels_per_node=50)
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
 import time
-
-from opencg.core.problem import Problem
-from opencg.core.column import Column
+from dataclasses import dataclass
+from typing import Optional
 
 # Import crew-pairing specific pricing algorithms
 from opencg.applications.crew_pairing.pricing import (
-    MultiBasePricingAlgorithm,
     BaseRestrictedLabelingAlgorithm,
-    PerSourcePricing,
     FastPerSourcePricing,
+    MultiBasePricingAlgorithm,
+    PerSourcePricing,
 )
 
 # Import HomeBaseResource
 from opencg.applications.crew_pairing.resources import HomeBaseResource
+from opencg.core.column import Column
+from opencg.core.problem import Problem
 
 
 @dataclass
@@ -111,8 +110,8 @@ class CrewPairingSolution:
     objective_ip: Optional[float]
     num_pairings: int
     coverage_pct: float
-    uncovered_flights: Set[int]
-    pairings: List[Column]
+    uncovered_flights: set[int]
+    pairings: list[Column]
     solve_time: float
     iterations: int
     num_columns: int
@@ -132,7 +131,7 @@ def solve_crew_pairing(
     Returns:
         CrewPairingSolution with results
     """
-    from opencg.master import HiGHSMasterProblem, HIGHS_AVAILABLE
+    from opencg.master import HiGHSMasterProblem
     from opencg.pricing import PricingConfig
 
     if config is None:
@@ -143,19 +142,19 @@ def solve_crew_pairing(
     # Select solver
     if config.solver == "cplex":
         try:
-            from opencg.master import CPLEXMasterProblem, CPLEX_AVAILABLE
+            from opencg.master import CPLEX_AVAILABLE, CPLEXMasterProblem
             if not CPLEX_AVAILABLE:
                 raise ImportError("CPLEX not available")
-            MasterClass = CPLEXMasterProblem
+            master_class = CPLEXMasterProblem
         except ImportError:
             if config.verbose:
                 print("CPLEX not available, falling back to HiGHS")
-            MasterClass = HiGHSMasterProblem
+            master_class = HiGHSMasterProblem
     else:
-        MasterClass = HiGHSMasterProblem
+        master_class = HiGHSMasterProblem
 
     # Create master problem
-    master = MasterClass(problem, verbosity=1 if config.verbose else 0)
+    master = master_class(problem, verbosity=1 if config.verbose else 0)
 
     # Add artificial columns for feasibility
     big_m = 1e6
@@ -226,12 +225,12 @@ def solve_crew_pairing(
     # Column generation loop
     if config.verbose:
         print("Running Column Generation...")
-        print(f"{'Iter':>5} {'Objective':>15} {'Columns':>10} {'New':>6} {'Coverage':>10}")
+        header = f"{'Iter':>5} {'Objective':>15} {'Columns':>10} {'New':>6} {'Coverage':>10}"
+        print(header)
         print("-" * 50)
 
     lp_sol = None
     iterations = 0
-    converged = False
     all_flights = set(range(len(problem.cover_constraints)))
 
     for iteration in range(config.max_iterations):
@@ -280,7 +279,6 @@ def solve_crew_pairing(
         if not pricing_sol.columns:
             if config.verbose:
                 print("Converged - no columns with negative reduced cost")
-            converged = True
             break
 
         # Add new columns

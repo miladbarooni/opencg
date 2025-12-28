@@ -75,8 +75,8 @@ The algorithm can be customized by:
 4. Using different stabilization methods
 """
 
-from opencg.solver.solution import CGSolution, CGStatus, CGIteration
-from opencg.solver.column_generation import ColumnGeneration, CGConfig, CGCallback
+from opencg.solver.column_generation import CGCallback, CGConfig, ColumnGeneration
+from opencg.solver.solution import CGIteration, CGSolution, CGStatus
 
 __all__ = [
     # Main class

@@ -7,7 +7,7 @@ from the master problem solver.
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 class SolutionStatus(Enum):
@@ -63,13 +63,13 @@ class MasterSolution:
     objective_value: Optional[float] = None
 
     # Primal solution: column_id -> value (lambda)
-    column_values: Dict[int, float] = field(default_factory=dict)
+    column_values: dict[int, float] = field(default_factory=dict)
 
     # Dual solution: item_id -> dual value (pi)
-    dual_values: Dict[int, float] = field(default_factory=dict)
+    dual_values: dict[int, float] = field(default_factory=dict)
 
     # Reduced costs: column_id -> reduced cost (optional, for diagnostics)
-    reduced_costs: Dict[int, float] = field(default_factory=dict)
+    reduced_costs: dict[int, float] = field(default_factory=dict)
 
     # Solver statistics
     solve_time: float = 0.0
@@ -132,7 +132,7 @@ class MasterSolution:
     # Methods
     # =========================================================================
 
-    def get_active_columns(self, tol: float = 1e-6) -> List[int]:
+    def get_active_columns(self, tol: float = 1e-6) -> list[int]:
         """
         Get column IDs with positive value in solution.
 
@@ -147,7 +147,7 @@ class MasterSolution:
             if value > tol
         ]
 
-    def get_fractional_columns(self, tol: float = 1e-6) -> List[int]:
+    def get_fractional_columns(self, tol: float = 1e-6) -> list[int]:
         """
         Get column IDs with fractional value in solution.
 
@@ -186,7 +186,7 @@ class MasterSolution:
             Summary string
         """
         lines = [
-            f"MasterSolution:",
+            "MasterSolution:",
             f"  Status: {self.status.name}",
         ]
 
@@ -203,7 +203,7 @@ class MasterSolution:
             fractional = self.get_fractional_columns()
             lines.append(f"  Fractional columns: {len(fractional)}")
         else:
-            lines.append(f"  Solution is integer")
+            lines.append("  Solution is integer")
 
         lines.extend([
             f"  Solve time: {self.solve_time:.3f}s",

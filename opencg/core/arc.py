@@ -28,7 +28,7 @@ for cache efficiency, not a hash map.
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 
 class ArcType(Enum):
@@ -124,9 +124,9 @@ class Arc:
     source: int  # Node index (not Node object, for C++ compatibility)
     target: int  # Node index
     cost: float
-    resource_consumption: Dict[str, float] = field(default_factory=dict)
+    resource_consumption: dict[str, float] = field(default_factory=dict)
     arc_type: ArcType = ArcType.GENERIC
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def get_consumption(self, resource_name: str, default: float = 0.0) -> float:
         """

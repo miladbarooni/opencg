@@ -30,26 +30,23 @@ References:
 """
 
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from opencg.core.column import Column, ColumnPool
 from opencg.core.problem import Problem
 from opencg.master import (
+    HIGHS_AVAILABLE,
+    HiGHSMasterProblem,
     MasterProblem,
     MasterSolution,
-    SolutionStatus,
-    HiGHSMasterProblem,
-    HIGHS_AVAILABLE,
 )
 from opencg.pricing import (
-    PricingProblem,
-    PricingConfig,
-    PricingSolution,
-    PricingStatus,
     LabelingAlgorithm,
+    PricingConfig,
+    PricingProblem,
 )
-from opencg.solver.solution import CGSolution, CGStatus, CGIteration
+from opencg.solver.solution import CGIteration, CGSolution, CGStatus
 
 
 @dataclass
@@ -153,7 +150,7 @@ class ColumnGeneration:
         self._column_pool = ColumnPool()
 
         # Callbacks
-        self._callbacks: List[CGCallback] = []
+        self._callbacks: list[CGCallback] = []
 
         # State
         self._is_solved = False
@@ -232,7 +229,7 @@ class ColumnGeneration:
         """
         self._callbacks.append(callback)
 
-    def add_initial_columns(self, columns: List[Column]) -> None:
+    def add_initial_columns(self, columns: list[Column]) -> None:
         """
         Add initial columns for warm starting.
 
@@ -350,7 +347,7 @@ class ColumnGeneration:
         if self._config.verbose:
             print(f"  Added {self._problem.num_cover_constraints} artificial columns")
 
-    def _get_artificial_usage(self, master_solution: MasterSolution) -> Tuple[float, set]:
+    def _get_artificial_usage(self, master_solution: MasterSolution) -> tuple[float, set]:
         """
         Compute total artificial column usage in LP solution.
 
@@ -383,7 +380,7 @@ class ColumnGeneration:
         Returns:
             CGSolution with LP results
         """
-        iteration_history: List[CGIteration] = []
+        iteration_history: list[CGIteration] = []
         total_master_time = 0.0
         total_pricing_time = 0.0
 
@@ -622,7 +619,7 @@ class ColumnGeneration:
         self,
         status: CGStatus,
         master_solution: Optional[MasterSolution],
-        iteration_history: List[CGIteration],
+        iteration_history: list[CGIteration],
         total_master_time: float,
         total_pricing_time: float,
     ) -> CGSolution:
@@ -674,7 +671,7 @@ class ColumnGeneration:
     # Utility Methods
     # =========================================================================
 
-    def get_iteration_history(self) -> List[CGIteration]:
+    def get_iteration_history(self) -> list[CGIteration]:
         """
         Get the history of all iterations.
 
@@ -708,7 +705,7 @@ class ColumnGeneration:
         """
         lines = [
             f"ColumnGeneration: {self._problem.name}",
-            f"  Config:",
+            "  Config:",
             f"    Max iterations: {self._config.max_iterations}",
             f"    Max time: {self._config.max_time}s",
             f"    Solve IP: {self._config.solve_ip}",

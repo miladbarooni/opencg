@@ -85,33 +85,32 @@ The PricingProblem ABC provides hooks for customization:
 """
 
 # Label and pool
-from opencg.pricing.label import Label, LabelPool
-
-# Solution and config
-from opencg.pricing.base import (
-    PricingProblem,
-    PricingConfig,
-    PricingSolution,
-    PricingStatus,
-)
-
-# Labeling algorithms
-from opencg.pricing.labeling import (
-    LabelingAlgorithm,
-    ElementaryLabelingAlgorithm,
-    HeuristicLabelingAlgorithm,
-)
-
 # Accelerated algorithm (uses C++ when available)
 from opencg.pricing.accelerated import (
     AcceleratedLabelingAlgorithm,
     create_labeling_algorithm,
 )
 
+# Solution and config
+from opencg.pricing.base import (
+    PricingConfig,
+    PricingProblem,
+    PricingSolution,
+    PricingStatus,
+)
+from opencg.pricing.label import Label, LabelPool
+
+# Labeling algorithms
+from opencg.pricing.labeling import (
+    ElementaryLabelingAlgorithm,
+    HeuristicLabelingAlgorithm,
+    LabelingAlgorithm,
+)
+
 # Multi-base pricing for crew pairing
 from opencg.pricing.multibase import (
-    MultiBasePricingAlgorithm,
     BaseRestrictedLabelingAlgorithm,
+    MultiBasePricingAlgorithm,
 )
 
 # Multi-base C++ pricing (uses C++ backend per base)

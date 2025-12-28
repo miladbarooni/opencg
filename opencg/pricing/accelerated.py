@@ -19,15 +19,15 @@ The interface is identical to LabelingAlgorithm, so they are interchangeable.
 """
 
 import time
-from typing import Dict, List, Optional
+from typing import Optional
 
-from opencg.core.column import Column
-from opencg.core.problem import Problem
-from opencg.core.node import NodeType
 from opencg.core.arc import ArcType
+from opencg.core.column import Column
+from opencg.core.node import NodeType
+from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -37,10 +37,16 @@ try:
     from opencg._core import HAS_CPP_BACKEND
     if HAS_CPP_BACKEND:
         from opencg._core import (
-            Network as CppNetwork,
             LabelingAlgorithm as CppLabelingAlgorithm,
+        )
+        from opencg._core import (
             LabelingConfig as CppLabelingConfig,
+        )
+        from opencg._core import (
             LabelingResult,
+        )
+        from opencg._core import (
+            Network as CppNetwork,
         )
     else:
         CppNetwork = None
@@ -94,10 +100,10 @@ class AcceleratedLabelingAlgorithm(PricingProblem):
         super().__init__(problem, config)
 
         self._uses_cpp = False
-        self._cpp_network: Optional['CppNetwork'] = None
-        self._cpp_algo: Optional['CppLabelingAlgorithm'] = None
-        self._py_to_cpp_node: Dict[int, int] = {}
-        self._resource_names: List[str] = []
+        self._cpp_network: Optional[CppNetwork] = None
+        self._cpp_algo: Optional[CppLabelingAlgorithm] = None
+        self._py_to_cpp_node: dict[int, int] = {}
+        self._resource_names: list[str] = []
 
         # Try to set up C++ backend
         if HAS_CPP_BACKEND:
@@ -247,7 +253,7 @@ class AcceleratedLabelingAlgorithm(PricingProblem):
 
     def _solve_cpp(self) -> PricingSolution:
         """Solve using C++ backend."""
-        start_time = time.time()
+        time.time()
 
         # Run C++ algorithm
         result = self._cpp_algo.solve()

@@ -24,17 +24,17 @@ Usage:
 # Try to import the C++ extension
 try:
     from opencg._core._core import (
-        # Network types
-        Network,
         Arc,
-        Node,
         # Label types
         Label,
-        LabelPool,
         # Labeling algorithm
         LabelingAlgorithm,
         LabelingConfig,
         LabelingResult,
+        LabelPool,
+        # Network types
+        Network,
+        Node,
     )
     HAS_CPP_BACKEND = True
 

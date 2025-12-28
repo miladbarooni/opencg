@@ -18,16 +18,16 @@ Advantages over PerSourcePricing:
 """
 
 import time
-from typing import Dict, List, Optional, Set
 from collections import defaultdict
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -74,7 +74,7 @@ class PerSourceBoostPricing(PricingProblem):
         self._find_source_sink()
 
         # Get source arcs with their bases
-        self._source_arcs: List[tuple] = []  # (arc_index, base)
+        self._source_arcs: list[tuple] = []  # (arc_index, base)
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
                 base = arc.get_attribute('base')
@@ -82,7 +82,7 @@ class PerSourceBoostPricing(PricingProblem):
                     self._source_arcs.append((arc.index, base))
 
         # Get sink arcs by base
-        self._sink_arcs_by_base: Dict[str, Set[int]] = defaultdict(set)
+        self._sink_arcs_by_base: dict[str, set[int]] = defaultdict(set)
         for arc in problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
                 base = arc.get_attribute('base')
@@ -118,8 +118,8 @@ class PerSourceBoostPricing(PricingProblem):
         """Run Boost SPPRC for each source arc."""
         start_time = time.time()
 
-        all_columns: List[Column] = []
-        covered_items: Set[int] = set()
+        all_columns: list[Column] = []
+        covered_items: set[int] = set()
         best_rc = None
         total_labels = 0
 

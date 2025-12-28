@@ -20,11 +20,9 @@ Design Notes:
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
-    from opencg.core.arc import Arc
-    from opencg.core.node import Node
     from opencg.core.resource import Resource
 
 
@@ -81,10 +79,10 @@ class Label:
 
     # Resource state (resource_name -> value)
     # Note: Values can be any type (float, set, tuple, etc.)
-    resource_values: Dict[str, Any] = field(default_factory=dict)
+    resource_values: dict[str, Any] = field(default_factory=dict)
 
     # Items covered by this path
-    covered_items: FrozenSet[int] = field(default_factory=frozenset)
+    covered_items: frozenset[int] = field(default_factory=frozenset)
 
     # Path reconstruction
     predecessor: Optional['Label'] = None
@@ -135,7 +133,7 @@ class Label:
     # Path Reconstruction
     # =========================================================================
 
-    def get_arc_indices(self) -> Tuple[int, ...]:
+    def get_arc_indices(self) -> tuple[int, ...]:
         """
         Reconstruct the sequence of arc indices.
 
@@ -151,7 +149,7 @@ class Label:
             path.append(self.last_arc_index)
         return tuple(path)
 
-    def get_node_indices(self) -> Tuple[int, ...]:
+    def get_node_indices(self) -> tuple[int, ...]:
         """
         Reconstruct the sequence of node indices.
 
@@ -233,7 +231,7 @@ class LabelPool:
         """
         self._num_nodes = num_nodes
         # Labels at each node: node_index -> list of non-dominated labels
-        self._labels: List[List[Label]] = [[] for _ in range(num_nodes)]
+        self._labels: list[list[Label]] = [[] for _ in range(num_nodes)]
         # Total labels created (for statistics)
         self._total_created: int = 0
         self._total_dominated: int = 0
@@ -258,7 +256,7 @@ class LabelPool:
         """Total labels pruned by dominance."""
         return self._total_dominated
 
-    def get_labels(self, node_index: int) -> List[Label]:
+    def get_labels(self, node_index: int) -> list[Label]:
         """
         Get all non-dominated labels at a node.
 
@@ -273,7 +271,7 @@ class LabelPool:
     def add_label(
         self,
         label: Label,
-        resources: List['Resource'],
+        resources: list['Resource'],
         check_dominance: bool = True
     ) -> bool:
         """
@@ -318,7 +316,7 @@ class LabelPool:
         self,
         label1: Label,
         label2: Label,
-        resources: List['Resource']
+        resources: list['Resource']
     ) -> bool:
         """
         Check if label1 dominates label2.
@@ -370,7 +368,7 @@ class LabelPool:
         self._total_created = 0
         self._total_dominated = 0
 
-    def statistics(self) -> Dict[str, Any]:
+    def statistics(self) -> dict[str, Any]:
         """
         Get statistics about the label pool.
 

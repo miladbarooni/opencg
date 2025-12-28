@@ -29,7 +29,7 @@ The Python Column class will wrap a C++ column reference.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass(frozen=True)
@@ -76,17 +76,17 @@ class Column:
         True
     """
     # Path representation
-    arc_indices: Tuple[int, ...]
+    arc_indices: tuple[int, ...]
 
     # Cost (objective function coefficient)
     cost: float
 
     # Final resource values (resource_name -> value)
-    resource_values: Dict[str, Any] = field(default_factory=dict)
+    resource_values: dict[str, Any] = field(default_factory=dict)
 
     # Items covered by this column (for set covering/partitioning constraints)
     # Using FrozenSet for hashability
-    covered_items: FrozenSet[int] = field(default_factory=frozenset)
+    covered_items: frozenset[int] = field(default_factory=frozenset)
 
     # Optional identifier
     column_id: Optional[int] = None
@@ -96,7 +96,7 @@ class Column:
     value: Optional[float] = None  # Value in solution (lambda)
 
     # Additional attributes
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Ensure arc_indices is a tuple and covered_items is a frozenset."""
@@ -287,8 +287,8 @@ class ColumnPool:
 
     def __init__(self):
         """Create an empty column pool."""
-        self._columns: List[Column] = []
-        self._id_to_index: Dict[int, int] = {}
+        self._columns: list[Column] = []
+        self._id_to_index: dict[int, int] = {}
         self._next_id: int = 0
 
     @property
@@ -333,11 +333,11 @@ class ColumnPool:
             return None
         return self._columns[index]
 
-    def all_columns(self) -> List[Column]:
+    def all_columns(self) -> list[Column]:
         """Get all columns in the pool."""
         return self._columns.copy()
 
-    def columns_covering(self, item: int) -> List[Column]:
+    def columns_covering(self, item: int) -> list[Column]:
         """
         Get columns that cover a specific item.
 
@@ -349,7 +349,7 @@ class ColumnPool:
         """
         return [col for col in self._columns if col.covers_item(item)]
 
-    def columns_with_positive_value(self) -> List[Column]:
+    def columns_with_positive_value(self) -> list[Column]:
         """Get columns with positive value in the solution."""
         return [col for col in self._columns if col.is_in_solution]
 

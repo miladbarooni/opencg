@@ -6,16 +6,19 @@ This module provides:
 - solve_vrptw: Solve VRP with Time Windows
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple, Union
-import time
 import math
+import time
+from dataclasses import dataclass
+from typing import Optional
 
-from opencg.core.column import Column
-from opencg.core.problem import Problem, CoverConstraint, CoverType, ObjectiveSense
 from opencg.applications.vrp.instance import CVRPInstance, VRPTWInstance
+from opencg.applications.vrp.network_builder import (
+    build_vrp_network,
+    build_vrptw_network,
+)
 from opencg.applications.vrp.resources import CapacityResource, TimeResource
-from opencg.applications.vrp.network_builder import build_vrp_network, build_vrptw_network
+from opencg.core.column import Column
+from opencg.core.problem import CoverConstraint, CoverType, ObjectiveSense, Problem
 
 
 @dataclass
@@ -35,7 +38,7 @@ class CVRPSolution:
     total_distance: float
     total_distance_ip: Optional[float]
     num_vehicles: int
-    routes: List[List[int]]  # List of routes, each route is list of customer indices
+    routes: list[list[int]]  # List of routes, each route is list of customer indices
     solve_time: float
     iterations: int
     num_columns: int
@@ -45,8 +48,8 @@ class CVRPSolution:
 def _extract_route_from_column(
     column: Column,
     network,
-    customer_node_map: Dict[int, int]
-) -> List[int]:
+    customer_node_map: dict[int, int]
+) -> list[int]:
     """
     Extract customer sequence from a column.
 
@@ -59,7 +62,7 @@ def _extract_route_from_column(
         List of customer indices in visit order
     """
     # Reverse the customer_node_map
-    node_to_customer = {v: k for k, v in customer_node_map.items()}
+    {v: k for k, v in customer_node_map.items()}
 
     # Get arc sequence from column
     route = []
@@ -72,7 +75,7 @@ def _extract_route_from_column(
     return route
 
 
-def _generate_greedy_routes(instance: CVRPInstance) -> List[List[int]]:
+def _generate_greedy_routes(instance: CVRPInstance) -> list[list[int]]:
     """
     Generate initial routes using a greedy nearest-neighbor heuristic.
 
@@ -113,7 +116,7 @@ def _generate_greedy_routes(instance: CVRPInstance) -> List[List[int]]:
     return routes
 
 
-def _route_cost(instance: CVRPInstance, route: List[int]) -> float:
+def _route_cost(instance: CVRPInstance, route: list[int]) -> float:
     """Compute total distance of a route."""
     if not route:
         return 0.0
@@ -132,10 +135,10 @@ def _route_cost(instance: CVRPInstance, route: List[int]) -> float:
 
 
 def _create_column_from_route(
-    route: List[int],
+    route: list[int],
     instance: CVRPInstance,
     network,
-    customer_node_map: Dict[int, int],
+    customer_node_map: dict[int, int],
 ) -> Column:
     """
     Create a Column from a route.
@@ -177,9 +180,11 @@ def solve_cvrp(
     Returns:
         CVRPSolution with results
     """
-    from opencg.master import HiGHSMasterProblem, HIGHS_AVAILABLE
-    from opencg.pricing import PricingProblem, PricingConfig, LabelingAlgorithm
-    from opencg.pricing import AcceleratedLabelingAlgorithm
+    from opencg.master import HiGHSMasterProblem
+    from opencg.pricing import (
+        AcceleratedLabelingAlgorithm,
+        PricingConfig,
+    )
 
     if config is None:
         config = CVRPConfig()
@@ -381,14 +386,14 @@ class VRPTWSolution:
     total_distance: float
     total_distance_ip: Optional[float]
     num_vehicles: int
-    routes: List[List[int]]  # List of routes, each route is list of customer indices
+    routes: list[list[int]]  # List of routes, each route is list of customer indices
     solve_time: float
     iterations: int
     num_columns: int
     lower_bound: float  # Capacity-based lower bound on vehicles
 
 
-def _generate_greedy_routes_vrptw(instance: VRPTWInstance) -> List[List[int]]:
+def _generate_greedy_routes_vrptw(instance: VRPTWInstance) -> list[list[int]]:
     """
     Generate initial routes for VRPTW using a time-aware greedy heuristic.
 
@@ -462,7 +467,7 @@ def _generate_greedy_routes_vrptw(instance: VRPTWInstance) -> List[List[int]]:
     return routes
 
 
-def _route_cost_vrptw(instance: VRPTWInstance, route: List[int]) -> float:
+def _route_cost_vrptw(instance: VRPTWInstance, route: list[int]) -> float:
     """Compute total distance of a VRPTW route."""
     if not route:
         return 0.0
@@ -481,10 +486,10 @@ def _route_cost_vrptw(instance: VRPTWInstance, route: List[int]) -> float:
 
 
 def _create_column_from_route_vrptw(
-    route: List[int],
+    route: list[int],
     instance: VRPTWInstance,
     network,
-    customer_node_map: Dict[int, int],
+    customer_node_map: dict[int, int],
 ) -> Column:
     """Create a Column from a VRPTW route."""
     cost = _route_cost_vrptw(instance, route)
@@ -512,9 +517,11 @@ def solve_vrptw(
     Returns:
         VRPTWSolution with results
     """
-    from opencg.master import HiGHSMasterProblem, HIGHS_AVAILABLE
-    from opencg.pricing import PricingProblem, PricingConfig, LabelingAlgorithm
-    from opencg.pricing import AcceleratedLabelingAlgorithm
+    from opencg.master import HiGHSMasterProblem
+    from opencg.pricing import (
+        AcceleratedLabelingAlgorithm,
+        PricingConfig,
+    )
 
     if config is None:
         config = VRPTWConfig()

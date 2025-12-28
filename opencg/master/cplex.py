@@ -24,20 +24,18 @@ Requirements:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     from docplex.mp.model import Model as CplexModel
     from docplex.mp.solution import SolveSolution
-    from docplex.mp.linear import LinearExpr
-    import docplex.mp.constants as cpx_const
     CPLEX_AVAILABLE = True
 except ImportError:
     CPLEX_AVAILABLE = False
     CplexModel = None
 
 from opencg.core.column import Column
-from opencg.core.problem import Problem, CoverType, ObjectiveSense
+from opencg.core.problem import CoverType, ObjectiveSense, Problem
 from opencg.master.base import MasterProblem
 from opencg.master.solution import MasterSolution, SolutionStatus
 
@@ -138,10 +136,10 @@ class CPLEXMasterProblem(MasterProblem):
         self._model: Optional[CplexModel] = None
 
         # Variables for each column: column_id -> variable
-        self._column_vars: Dict[int, Any] = {}
+        self._column_vars: dict[int, Any] = {}
 
         # Constraints for each item: item_id -> constraint
-        self._item_constraints: Dict[int, Any] = {}
+        self._item_constraints: dict[int, Any] = {}
 
         # Track if we're in IP mode
         self._is_ip_mode: bool = False
@@ -150,7 +148,7 @@ class CPLEXMasterProblem(MasterProblem):
         self._last_lp_solution: Optional[SolveSolution] = None
 
         # Pending constraints (created lazily when first column is added)
-        self._pending_constraints: Dict[int, tuple] = {}
+        self._pending_constraints: dict[int, tuple] = {}
 
         # Call parent init (which calls _build_model)
         super().__init__(problem)
@@ -352,7 +350,7 @@ class CPLEXMasterProblem(MasterProblem):
             # Get MIP gap if available
             try:
                 master_solution.gap = self._model.solve_details.mip_relative_gap
-            except:
+            except (AttributeError, RuntimeError):
                 pass
 
             # Get primal values
@@ -363,7 +361,7 @@ class CPLEXMasterProblem(MasterProblem):
 
         return master_solution
 
-    def _get_dual_values_impl(self) -> Dict[int, float]:
+    def _get_dual_values_impl(self) -> dict[int, float]:
         """Extract dual values from CPLEX."""
         duals = {}
 
@@ -425,7 +423,7 @@ class CPLEXMasterProblem(MasterProblem):
 
     def _add_cut_impl(
         self,
-        coefficients: Dict[int, float],
+        coefficients: dict[int, float],
         sense: str,
         rhs: float
     ) -> int:
@@ -438,11 +436,11 @@ class CPLEXMasterProblem(MasterProblem):
 
         # Add constraint based on sense
         if sense == '<=':
-            ct = self._model.add_constraint(expr <= rhs)
+            self._model.add_constraint(expr <= rhs)
         elif sense == '>=':
-            ct = self._model.add_constraint(expr >= rhs)
+            self._model.add_constraint(expr >= rhs)
         else:  # '='
-            ct = self._model.add_constraint(expr == rhs)
+            self._model.add_constraint(expr == rhs)
 
         return self._model.number_of_constraints - 1
 
@@ -521,7 +519,7 @@ class CPLEXMasterProblem(MasterProblem):
         self._mip_gap = gap
         self._model.parameters.mip.tolerances.mipgap = gap
 
-    def get_model_stats(self) -> Dict[str, Any]:
+    def get_model_stats(self) -> dict[str, Any]:
         """
         Get statistics about the model.
 

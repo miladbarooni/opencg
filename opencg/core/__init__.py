@@ -20,18 +20,18 @@ Components:
 - Problem: Container that defines a complete CG problem
 """
 
+from opencg.core.arc import Arc, ArcType
+from opencg.core.column import Column
+from opencg.core.network import Network
+from opencg.core.node import Node, NodeType
+from opencg.core.problem import Problem
 from opencg.core.resource import (
-    Resource,
     AccumulatingResource,
     IntervalResource,
+    Resource,
     StateResource,
     TimeWindowResource,
 )
-from opencg.core.node import Node, NodeType
-from opencg.core.arc import Arc, ArcType
-from opencg.core.network import Network
-from opencg.core.column import Column
-from opencg.core.problem import Problem
 
 __all__ = [
     # Resource types

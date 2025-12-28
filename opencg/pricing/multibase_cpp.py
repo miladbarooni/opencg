@@ -11,15 +11,15 @@ structurally enforcing the constraint through network filtering.
 """
 
 import time
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
 from opencg.core.node import NodeType
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -29,9 +29,13 @@ try:
     from opencg._core import HAS_CPP_BACKEND
     if HAS_CPP_BACKEND:
         from opencg._core import (
-            Network as CppNetwork,
             LabelingAlgorithm as CppLabelingAlgorithm,
+        )
+        from opencg._core import (
             LabelingConfig as CppLabelingConfig,
+        )
+        from opencg._core import (
+            Network as CppNetwork,
         )
     else:
         CppNetwork = None
@@ -87,9 +91,9 @@ class MultiBaseCppPricing(PricingProblem):
                 self._resource_limits.append(r.max_value)
 
         # Build per-base C++ networks
-        self._base_networks: Dict[str, 'CppNetwork'] = {}
-        self._base_algorithms: Dict[str, 'CppLabelingAlgorithm'] = {}
-        self._base_arc_maps: Dict[str, Dict[int, int]] = {}  # cpp_arc -> py_arc
+        self._base_networks: dict[str, CppNetwork] = {}
+        self._base_algorithms: dict[str, CppLabelingAlgorithm] = {}
+        self._base_arc_maps: dict[str, dict[int, int]] = {}  # cpp_arc -> py_arc
 
         for base in self._bases:
             self._build_base_network(base)
@@ -104,7 +108,7 @@ class MultiBaseCppPricing(PricingProblem):
             elif node.node_type == NodeType.SINK:
                 self._sink_idx = i
 
-    def _find_bases(self) -> List[str]:
+    def _find_bases(self) -> list[str]:
         bases = set()
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -113,7 +117,7 @@ class MultiBaseCppPricing(PricingProblem):
                     bases.add(base)
         return sorted(bases)
 
-    def _find_base_source_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_source_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -122,7 +126,7 @@ class MultiBaseCppPricing(PricingProblem):
                     result[base].add(arc.index)
         return result
 
-    def _find_base_sink_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_sink_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
@@ -136,8 +140,8 @@ class MultiBaseCppPricing(PricingProblem):
         py_network = self._problem.network
 
         cpp_network = CppNetwork()
-        py_to_cpp_node: Dict[int, int] = {}
-        cpp_arc_to_py: Dict[int, int] = {}
+        py_to_cpp_node: dict[int, int] = {}
+        cpp_arc_to_py: dict[int, int] = {}
 
         # Add nodes
         for i in range(py_network.num_nodes):
@@ -218,7 +222,7 @@ class MultiBaseCppPricing(PricingProblem):
         """Run pricing for each base and combine results."""
         start_time = time.time()
 
-        all_columns: List[Column] = []
+        all_columns: list[Column] = []
         best_rc = None
         total_labels = 0
         total_dominated = 0
@@ -273,7 +277,7 @@ class MultiBaseCppPricing(PricingProblem):
     def _convert_cpp_label(
         self,
         cpp_label,
-        arc_map: Dict[int, int],
+        arc_map: dict[int, int],
         base: str
     ) -> Optional[Column]:
         """Convert C++ label to Python Column."""

@@ -7,7 +7,7 @@ These resources enforce constraints specific to vehicle routing problems:
 - VisitedResource: Enforces elementarity (each customer visited once)
 """
 
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from opencg.core.resource import Resource
 

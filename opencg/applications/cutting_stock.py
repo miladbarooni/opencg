@@ -52,16 +52,20 @@ Usage:
         print(f"  Use pattern {pattern} x {count}")
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 import time
+from dataclasses import dataclass
+from typing import Optional
 
 from opencg.core.column import Column
-from opencg.core.problem import Problem, CoverConstraint, CoverType, ObjectiveSense
 from opencg.core.network import Network
-from opencg.master.base import MasterProblem
+from opencg.core.problem import CoverConstraint, CoverType, ObjectiveSense, Problem
 from opencg.master.solution import MasterSolution, SolutionStatus
-from opencg.pricing.base import PricingProblem, PricingConfig, PricingSolution, PricingStatus
+from opencg.pricing.base import (
+    PricingConfig,
+    PricingProblem,
+    PricingSolution,
+    PricingStatus,
+)
 
 
 @dataclass
@@ -77,9 +81,9 @@ class CuttingStockInstance:
         name: Optional instance name
     """
     roll_width: float
-    item_sizes: List[float]
-    item_demands: List[int]
-    item_names: Optional[List[str]] = None
+    item_sizes: list[float]
+    item_demands: list[int]
+    item_names: Optional[list[str]] = None
     name: Optional[str] = None
 
     def __post_init__(self):
@@ -126,7 +130,7 @@ class CuttingStockInstance:
         import os
         name = os.path.splitext(os.path.basename(filepath))[0]
 
-        with open(filepath, 'r') as f:
+        with open(filepath) as f:
             lines = [line.strip() for line in f if line.strip()]
 
         num_types = int(lines[0])
@@ -237,8 +241,8 @@ class CuttingStockMaster:
             )
 
         # Track columns
-        self._columns: List[Column] = []
-        self._column_to_solver_idx: Dict[int, int] = {}
+        self._columns: list[Column] = []
+        self._column_to_solver_idx: dict[int, int] = {}
 
     @property
     def num_columns(self) -> int:
@@ -351,7 +355,7 @@ class CuttingStockMaster:
 
         return solution
 
-    def get_dual_values(self) -> Dict[int, float]:
+    def get_dual_values(self) -> dict[int, float]:
         """Get dual values from last LP solve."""
         sol = self._highs.getSolution()
         return {i: sol.row_dual[i] for i in range(self._instance.num_items)}
@@ -444,7 +448,7 @@ class CuttingStockPricing(PricingProblem):
                 iterations=1,
             )
 
-    def _solve_knapsack_dp(self, duals: List[float]) -> Tuple[Dict[int, int], float]:
+    def _solve_knapsack_dp(self, duals: list[float]) -> tuple[dict[int, int], float]:
         """
         Solve bounded knapsack using dynamic programming with backtracking.
 
@@ -455,7 +459,7 @@ class CuttingStockPricing(PricingProblem):
         Returns:
             (pattern, total_value) where pattern is {item_id: count}
         """
-        W = int(self._roll_width)
+        roll_width = int(self._roll_width)
         n = self._num_items
 
         # Precompute item info: (original_idx, size, value, max_copies)
@@ -486,18 +490,18 @@ class CuttingStockPricing(PricingProblem):
         if not virtual_items:
             return {}, 0.0
 
-        num_virtual = len(virtual_items)
+        len(virtual_items)
 
         # DP: dp[w] = max value achievable with capacity w
-        dp = [0.0] * (W + 1)
+        dp = [0.0] * (roll_width + 1)
 
         # choice[w] = index of last virtual item added to achieve dp[w], or -1
-        choice = [-1] * (W + 1)
+        choice = [-1] * (roll_width + 1)
 
         # Process each virtual item (0-1 knapsack style)
         for vi, (orig_idx, item_size, item_value, item_copies) in enumerate(virtual_items):
             # Process in reverse to ensure each virtual item used at most once
-            for w in range(W, item_size - 1, -1):
+            for w in range(roll_width, item_size - 1, -1):
                 new_value = dp[w - item_size] + item_value
                 if new_value > dp[w]:
                     dp[w] = new_value
@@ -505,25 +509,24 @@ class CuttingStockPricing(PricingProblem):
 
         # Backtrack to reconstruct the pattern
         pattern = {}
-        w = W
+        w = roll_width
         while w > 0 and choice[w] >= 0:
             vi = choice[w]
             orig_idx, item_size, item_value, item_copies = virtual_items[vi]
             pattern[orig_idx] = pattern.get(orig_idx, 0) + item_copies
             w -= item_size
 
-        return pattern, dp[W]
+        return pattern, dp[roll_width]
 
-    def _solve_knapsack_greedy(self, duals: List[float]) -> Tuple[Dict[int, int], float]:
+    def _solve_knapsack_greedy(self, duals: list[float]) -> tuple[dict[int, int], float]:
         """
         Solve knapsack using greedy heuristic (for non-integer sizes).
 
         Returns:
             (pattern, total_value) where pattern is {item_id: count}
         """
-        W = self._roll_width
         pattern = {}
-        remaining = W
+        remaining = self._roll_width
         total_value = 0.0
 
         # Sort by value density (dual / size)
@@ -550,7 +553,7 @@ class CuttingStockPricing(PricingProblem):
 
         return pattern, total_value
 
-    def _create_column(self, pattern: Dict[int, int], reduced_cost: float) -> Column:
+    def _create_column(self, pattern: dict[int, int], reduced_cost: float) -> Column:
         """Create a Column from a pattern."""
         # covered_items = items that appear in pattern
         covered = frozenset(i for i, count in pattern.items() if count > 0)
@@ -570,7 +573,7 @@ class CuttingStockSolution:
     """Solution to a cutting stock problem."""
     num_rolls: float  # LP relaxation may be fractional
     num_rolls_ip: Optional[int]  # Integer solution
-    patterns: List[Tuple[Dict[int, int], float]]  # (pattern, count)
+    patterns: list[tuple[dict[int, int], float]]  # (pattern, count)
     lp_objective: float
     ip_objective: Optional[float]
     solve_time: float
@@ -579,7 +582,7 @@ class CuttingStockSolution:
     lower_bound: Optional[float] = None  # L2 lower bound
 
 
-def _generate_ffd_patterns(instance: CuttingStockInstance) -> List[Dict[int, int]]:
+def _generate_ffd_patterns(instance: CuttingStockInstance) -> list[dict[int, int]]:
     """
     Generate patterns using First Fit Decreasing heuristic.
 
@@ -599,14 +602,14 @@ def _generate_ffd_patterns(instance: CuttingStockInstance) -> List[Dict[int, int
     items.sort(reverse=True)
 
     patterns = []
-    W = instance.roll_width
+    roll_width = instance.roll_width
 
     for size, item_id in items:
         # Try to fit in existing pattern
         placed = False
         for pattern in patterns:
             used = sum(instance.item_sizes[i] * cnt for i, cnt in pattern.items())
-            if used + size <= W:
+            if used + size <= roll_width:
                 pattern[item_id] = pattern.get(item_id, 0) + 1
                 placed = True
                 break

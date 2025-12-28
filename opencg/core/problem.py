@@ -32,11 +32,11 @@ Future Extensions:
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Optional
 
+from opencg.core.column import Column
 from opencg.core.network import Network
 from opencg.core.resource import Resource
-from opencg.core.column import Column, ColumnPool
 
 
 class ObjectiveSense(Enum):
@@ -136,20 +136,20 @@ class Problem:
 
     # Core components
     network: Network = field(default_factory=Network)
-    resources: List[Resource] = field(default_factory=list)
+    resources: list[Resource] = field(default_factory=list)
 
     # Cover constraints
-    cover_constraints: List[CoverConstraint] = field(default_factory=list)
+    cover_constraints: list[CoverConstraint] = field(default_factory=list)
     cover_type: CoverType = CoverType.SET_PARTITIONING
 
     # Objective
     objective_sense: ObjectiveSense = ObjectiveSense.MINIMIZE
 
     # Initial solution (warm start)
-    initial_columns: List[Column] = field(default_factory=list)
+    initial_columns: list[Column] = field(default_factory=list)
 
     # Metadata for tracking experiments
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # =========================================================================
     # Convenience Methods for Building
@@ -220,7 +220,7 @@ class Problem:
                 return resource
         return None
 
-    def get_resource_names(self) -> List[str]:
+    def get_resource_names(self) -> list[str]:
         """Get list of resource names."""
         return [r.name for r in self.resources]
 
@@ -249,7 +249,7 @@ class Problem:
         return len(self.cover_constraints)
 
     @property
-    def cover_item_ids(self) -> Set[int]:
+    def cover_item_ids(self) -> set[int]:
         """Set of all item IDs that must be covered."""
         return {c.item_id for c in self.cover_constraints}
 
@@ -257,7 +257,7 @@ class Problem:
     # Validation
     # =========================================================================
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """
         Validate the problem definition.
 
@@ -396,7 +396,7 @@ class ProblemBuilder:
         self._problem.add_resource(resource)
         return self
 
-    def with_resources(self, resources: List[Resource]) -> 'ProblemBuilder':
+    def with_resources(self, resources: list[Resource]) -> 'ProblemBuilder':
         """Set all resources."""
         self._problem.resources = list(resources)
         return self
@@ -419,7 +419,7 @@ class ProblemBuilder:
 
     def with_cover_constraints(
         self,
-        constraints: List[CoverConstraint]
+        constraints: list[CoverConstraint]
     ) -> 'ProblemBuilder':
         """Set all cover constraints."""
         self._problem.cover_constraints = list(constraints)
@@ -427,7 +427,7 @@ class ProblemBuilder:
 
     def add_cover_constraints_from_arcs(
         self,
-        arcs: List,  # List of Arc
+        arcs: list,  # List of Arc
         name_attr: str = "flight_number"
     ) -> 'ProblemBuilder':
         """
@@ -462,7 +462,7 @@ class ProblemBuilder:
         """Set objective to maximize."""
         return self.with_objective(ObjectiveSense.MAXIMIZE)
 
-    def with_initial_columns(self, columns: List[Column]) -> 'ProblemBuilder':
+    def with_initial_columns(self, columns: list[Column]) -> 'ProblemBuilder':
         """Set initial columns."""
         self._problem.initial_columns = list(columns)
         return self
@@ -485,7 +485,7 @@ class ProblemBuilder:
         errors = self._problem.validate()
         if errors:
             raise ValueError(
-                f"Invalid problem:\n" + "\n".join(f"  - {e}" for e in errors)
+                "Invalid problem:\n" + "\n".join(f"  - {e}" for e in errors)
             )
         return self._problem
 

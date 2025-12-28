@@ -88,7 +88,7 @@ jobs:
 
     - name: Check code formatting with ruff
       run: |
-        ruff check opencg/ --select=E,F,I,N,W,UP
+        ruff check opencg/
 
     - name: Check code formatting with black
       run: |

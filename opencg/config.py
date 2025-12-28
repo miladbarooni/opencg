@@ -19,7 +19,7 @@ Example:
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 
 def _get_project_root() -> Path:
@@ -64,7 +64,7 @@ class OpenCGConfig:
     num_threads: int = 1
 
     # Numerical tolerances
-    tolerances: Dict[str, float] = field(default_factory=lambda: {
+    tolerances: dict[str, float] = field(default_factory=lambda: {
         "optimality": 1e-6,
         "feasibility": 1e-6,
         "integrality": 1e-5,
@@ -116,7 +116,7 @@ class OpenCGConfig:
     # Serialization
     # =========================================================================
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary."""
         return {
             "data_path": str(self.data_path),
@@ -128,7 +128,7 @@ class OpenCGConfig:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'OpenCGConfig':
+    def from_dict(cls, d: dict[str, Any]) -> 'OpenCGConfig':
         """Create config from dictionary."""
         return cls(
             data_path=Path(d.get("data_path", _get_default_data_path())),
@@ -200,7 +200,7 @@ class OpenCGConfig:
             return cls()
 
         # Simple TOML-like parsing (no dependency needed)
-        config_dict: Dict[str, Any] = {"tolerances": {}}
+        config_dict: dict[str, Any] = {"tolerances": {}}
         current_section = None
 
         for line in path.read_text().splitlines():

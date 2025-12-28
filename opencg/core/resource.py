@@ -32,8 +32,11 @@ The Python version will remain for:
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, Optional, TypeVar, Set, Tuple
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar
+
+if TYPE_CHECKING:
+    from opencg.core.arc import Arc
+    from opencg.core.node import Node
 
 # Type variable for resource values (float, int, set, tuple, etc.)
 T = TypeVar('T')
@@ -307,7 +310,7 @@ class IntervalResource(Resource[float]):
         return f"IntervalResource('{self.name}', [{self.min_value}, {self.max_value}])"
 
 
-class StateResource(Resource[Set[int]]):
+class StateResource(Resource[set[int]]):
     """
     A resource tracking visited states (e.g., nodes, activities).
 
@@ -343,10 +346,10 @@ class StateResource(Resource[Set[int]]):
         super().__init__(name)
         self.forbidden_revisit = forbidden_revisit
 
-    def initial_value(self) -> Set[int]:
+    def initial_value(self) -> set[int]:
         return set()
 
-    def extend(self, current_value: Set[int], arc: 'Arc') -> Optional[Set[int]]:
+    def extend(self, current_value: set[int], arc: 'Arc') -> Optional[set[int]]:
         # Get the state ID from the arc's target node
         # (This will be the node index, typically)
         state_id = arc.get_consumption(self.name, None)
@@ -364,11 +367,11 @@ class StateResource(Resource[Set[int]]):
         new_value = current_value | {state_id}
         return new_value
 
-    def is_feasible(self, value: Set[int], node: 'Node') -> bool:
+    def is_feasible(self, value: set[int], node: 'Node') -> bool:
         # Feasibility is checked during extension
         return True
 
-    def dominates(self, value1: Set[int], value2: Set[int]) -> bool:
+    def dominates(self, value1: set[int], value2: set[int]) -> bool:
         # Fewer visited states = more flexibility = dominates
         return value1.issubset(value2)
 
@@ -591,9 +594,3 @@ class HomeBaseResource(Resource[Optional[str]]):
         return f"HomeBaseResource('{self.name}')"
 
 
-# Forward references for type hints (these are defined in other modules)
-# This is a common Python pattern to avoid circular imports
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from opencg.core.arc import Arc
-    from opencg.core.node import Node

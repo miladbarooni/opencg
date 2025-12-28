@@ -32,7 +32,7 @@ To create a custom pricing solver:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Optional
 
 from opencg.core.column import Column
 from opencg.core.problem import Problem
@@ -67,7 +67,7 @@ class PricingSolution:
         iterations: Number of iterations (node extensions)
     """
     status: PricingStatus = PricingStatus.NO_COLUMNS
-    columns: List[Column] = field(default_factory=list)
+    columns: list[Column] = field(default_factory=list)
     best_reduced_cost: Optional[float] = None
     num_labels_created: int = 0
     num_labels_dominated: int = 0
@@ -96,7 +96,7 @@ class PricingSolution:
     def summary(self) -> str:
         """Return a human-readable summary."""
         lines = [
-            f"PricingSolution:",
+            "PricingSolution:",
             f"  Status: {self.status.name}",
             f"  Columns found: {self.num_columns}",
         ]
@@ -178,10 +178,10 @@ class PricingProblem(ABC):
         self._config = config or PricingConfig()
 
         # Dual values (item_id -> pi)
-        self._dual_values: Dict[int, float] = {}
+        self._dual_values: dict[int, float] = {}
 
         # Item coverage mapping (arc_index -> list of item_ids it covers)
-        self._arc_to_items: Dict[int, List[int]] = {}
+        self._arc_to_items: dict[int, list[int]] = {}
         self._build_arc_item_mapping()
 
     def _build_arc_item_mapping(self) -> None:
@@ -229,7 +229,7 @@ class PricingProblem(ABC):
         return self._config
 
     @property
-    def dual_values(self) -> Dict[int, float]:
+    def dual_values(self) -> dict[int, float]:
         """Current dual values."""
         return self._dual_values.copy()
 
@@ -247,7 +247,7 @@ class PricingProblem(ABC):
     # Public API
     # =========================================================================
 
-    def set_dual_values(self, dual_values: Dict[int, float]) -> None:
+    def set_dual_values(self, dual_values: dict[int, float]) -> None:
         """
         Set dual values from the master problem.
 
@@ -279,7 +279,7 @@ class PricingProblem(ABC):
 
         return solution
 
-    def compute_reduced_cost(self, arc_indices: List[int]) -> float:
+    def compute_reduced_cost(self, arc_indices: list[int]) -> float:
         """
         Compute the reduced cost of a path.
 
@@ -335,7 +335,7 @@ class PricingProblem(ABC):
 
         return cost
 
-    def get_items_covered_by_arc(self, arc_index: int) -> List[int]:
+    def get_items_covered_by_arc(self, arc_index: int) -> list[int]:
         """
         Get item IDs covered by an arc.
 

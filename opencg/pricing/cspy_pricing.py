@@ -12,18 +12,19 @@ References:
   bidirectional labeling algorithms"
 """
 
-from typing import Dict, List, Optional, Set
 import time
+from typing import Optional
+
 import networkx as nx
 import numpy as np
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
-from opencg.core.problem import Problem
 from opencg.core.node import NodeType
+from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -78,8 +79,8 @@ class CSPYBasePricingAlgorithm(PricingProblem):
         self._num_resources = len(self._resource_names)
 
         # Build arc index mappings
-        self._arc_to_edge: Dict[int, tuple] = {}  # arc_index -> (src_name, tgt_name)
-        self._edge_to_arc: Dict[tuple, int] = {}  # (src_name, tgt_name) -> arc_index
+        self._arc_to_edge: dict[int, tuple] = {}  # arc_index -> (src_name, tgt_name)
+        self._edge_to_arc: dict[tuple, int] = {}  # (src_name, tgt_name) -> arc_index
 
     def _find_source_sink(self) -> None:
         """Find source and sink node indices."""
@@ -106,7 +107,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
         # Plus our actual resources
         n_res = 1 + self._num_resources  # path_length + actual resources
 
-        G = nx.DiGraph(directed=True, n_res=n_res)
+        graph = nx.DiGraph(directed=True, n_res=n_res)
 
         network = self._problem.network
 
@@ -139,7 +140,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
             dual_sum = sum(self._dual_values.get(item, 0.0) for item in items_covered)
             reduced_cost = arc.cost - dual_sum
 
-            G.add_edge(
+            graph.add_edge(
                 src_name,
                 tgt_name,
                 res_cost=res_cost,
@@ -150,7 +151,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
             self._arc_to_edge[arc.index] = (src_name, tgt_name)
             self._edge_to_arc[(src_name, tgt_name)] = arc.index
 
-        return G
+        return graph
 
     def _get_resource_bounds(self) -> tuple:
         """Get min/max resource bounds for cspy."""
@@ -178,7 +179,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
         start_time = time.time()
 
         # Build graph
-        G = self._build_networkx_graph()
+        graph = self._build_networkx_graph()
         min_res, max_res = self._get_resource_bounds()
 
         columns = []
@@ -188,7 +189,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
         # Run cspy - it finds one optimal path
         try:
             bidirec = BiDirectional(
-                G,
+                graph,
                 max_res=max_res,
                 min_res=min_res,
                 direction="both",
@@ -199,8 +200,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
 
             if bidirec.path and len(bidirec.path) > 2:  # More than just Source-Sink
                 path = bidirec.path
-                total_res = bidirec.total_res
-                path_cost = bidirec.path_cost if hasattr(bidirec, 'path_cost') else 0
+                bidirec.path_cost if hasattr(bidirec, 'path_cost') else 0
 
                 # Convert path to column
                 arc_indices = []
@@ -232,7 +232,7 @@ class CSPYBasePricingAlgorithm(PricingProblem):
                     best_rc = reduced_cost
                     num_paths_found = 1
 
-        except Exception as e:
+        except Exception:
             # cspy can raise exceptions for infeasible problems
             pass
 
@@ -278,7 +278,7 @@ class CSPYMultiPathPricing(CSPYBasePricingAlgorithm):
         """Find multiple paths by iterative weight modification."""
         start_time = time.time()
 
-        G = self._build_networkx_graph()
+        graph = self._build_networkx_graph()
         min_res, max_res = self._get_resource_bounds()
 
         columns = []
@@ -299,7 +299,7 @@ class CSPYMultiPathPricing(CSPYBasePricingAlgorithm):
                         break
 
                 bidirec = BiDirectional(
-                    G,
+                    graph,
                     max_res=max_res,
                     min_res=min_res,
                     direction="both",
@@ -329,7 +329,7 @@ class CSPYMultiPathPricing(CSPYBasePricingAlgorithm):
                         covered_items.update(self.get_items_covered_by_arc(arc_idx))
 
                         # Increase weight to discourage reuse
-                        G[path[i]][path[i + 1]]['weight'] += self._weight_increment
+                        graph[path[i]][path[i + 1]]['weight'] += self._weight_increment
 
                 dual_sum = sum(self._dual_values.get(item, 0.0) for item in covered_items)
                 reduced_cost = cost - dual_sum
@@ -411,7 +411,7 @@ class CSPYMultiBasePricing(PricingProblem):
             elif node.node_type == NodeType.SINK:
                 self._sink_idx = i
 
-    def _find_bases(self) -> List[str]:
+    def _find_bases(self) -> list[str]:
         bases = set()
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -420,7 +420,7 @@ class CSPYMultiBasePricing(PricingProblem):
                     bases.add(base)
         return sorted(bases)
 
-    def _find_base_source_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_source_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SOURCE_ARC:
@@ -429,7 +429,7 @@ class CSPYMultiBasePricing(PricingProblem):
                     result[base].add(arc.index)
         return result
 
-    def _find_base_sink_arcs(self) -> Dict[str, Set[int]]:
+    def _find_base_sink_arcs(self) -> dict[str, set[int]]:
         result = {base: set() for base in self._bases}
         for arc in self._problem.network.arcs:
             if arc.arc_type == ArcType.SINK_ARC:
@@ -443,7 +443,7 @@ class CSPYMultiBasePricing(PricingProblem):
         # Resources: path_length, duty_time, flight_time, duty_days
         n_res = 4
 
-        G = nx.DiGraph(directed=True, n_res=n_res)
+        graph = nx.DiGraph(directed=True, n_res=n_res)
         network = self._problem.network
 
         arc_to_edge = {}
@@ -484,11 +484,11 @@ class CSPYMultiBasePricing(PricingProblem):
             dual_sum = sum(self._dual_values.get(item, 0.0) for item in items_covered)
             reduced_cost = arc.cost - dual_sum
 
-            G.add_edge(src_name, tgt_name, res_cost=res_cost, weight=reduced_cost)
+            graph.add_edge(src_name, tgt_name, res_cost=res_cost, weight=reduced_cost)
             arc_to_edge[arc.index] = (src_name, tgt_name)
             edge_to_arc[(src_name, tgt_name)] = arc.index
 
-        return G, arc_to_edge, edge_to_arc
+        return graph, arc_to_edge, edge_to_arc
 
     def _solve_impl(self) -> PricingSolution:
         """Run cspy for each base and combine results."""
@@ -513,15 +513,15 @@ class CSPYMultiBasePricing(PricingProblem):
                 if elapsed >= self._config.max_time:
                     break
 
-            G, arc_to_edge, edge_to_arc = self._build_base_graph(base)
+            graph, arc_to_edge, edge_to_arc = self._build_base_graph(base)
 
-            if G.number_of_edges() == 0:
+            if graph.number_of_edges() == 0:
                 continue
 
             # Check if path exists
-            if "Source" not in G or "Sink" not in G:
+            if "Source" not in graph or "Sink" not in graph:
                 continue
-            if not nx.has_path(G, "Source", "Sink"):
+            if not nx.has_path(graph, "Source", "Sink"):
                 continue
 
             # Find multiple paths for this base
@@ -533,7 +533,7 @@ class CSPYMultiBasePricing(PricingProblem):
 
                 try:
                     bidirec = BiDirectional(
-                        G,
+                        graph,
                         max_res=max_res,
                         min_res=min_res,
                         direction="both",
@@ -563,7 +563,7 @@ class CSPYMultiBasePricing(PricingProblem):
                             covered_items.update(self.get_items_covered_by_arc(arc_idx))
 
                             # Increase weight to find different path next time
-                            G[path[i]][path[i + 1]]['weight'] += 10000.0
+                            graph[path[i]][path[i + 1]]['weight'] += 10000.0
 
                     dual_sum = sum(self._dual_values.get(item, 0.0) for item in covered_items)
                     reduced_cost = cost - dual_sum

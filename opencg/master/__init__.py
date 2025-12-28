@@ -72,19 +72,19 @@ The MasterProblem ABC provides several hooks for customization:
    - _after_solve_ip(): Called after IP solve
 """
 
-from opencg.master.solution import MasterSolution, SolutionStatus
 from opencg.master.base import MasterProblem, StabilizationConfig
+from opencg.master.solution import MasterSolution, SolutionStatus
 
 # Try to import HiGHS implementation
 try:
-    from opencg.master.highs import HiGHSMasterProblem, HIGHS_AVAILABLE
+    from opencg.master.highs import HIGHS_AVAILABLE, HiGHSMasterProblem
 except ImportError:
     HIGHS_AVAILABLE = False
     HiGHSMasterProblem = None  # type: ignore
 
 # Try to import CPLEX implementation
 try:
-    from opencg.master.cplex import CPLEXMasterProblem, CPLEX_AVAILABLE
+    from opencg.master.cplex import CPLEX_AVAILABLE, CPLEXMasterProblem
 except ImportError:
     CPLEX_AVAILABLE = False
     CPLEXMasterProblem = None  # type: ignore

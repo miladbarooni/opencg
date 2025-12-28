@@ -33,15 +33,15 @@ EURO Journal on Transportation and Logistics, 6(2), 111-137.
 import re
 import warnings
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
+from opencg.core.arc import ArcType
 from opencg.core.network import Network
-from opencg.core.node import Node, NodeType
-from opencg.core.arc import Arc, ArcType
+from opencg.core.node import NodeType
+from opencg.core.problem import CoverType, Problem, ProblemBuilder
 from opencg.core.resource import AccumulatingResource
-from opencg.core.problem import Problem, CoverType, ProblemBuilder
 from opencg.parsers.base import Parser, ParserConfig
 
 
@@ -209,7 +209,7 @@ class KasirzadehParser(Parser):
 
         return problem
 
-    def _parse_bases(self, filepath: Path) -> List[BaseInfo]:
+    def _parse_bases(self, filepath: Path) -> list[BaseInfo]:
         """
         Parse listOfBases.csv.
 
@@ -219,7 +219,7 @@ class KasirzadehParser(Parser):
         """
         bases = []
 
-        with open(filepath, 'r', encoding=self.config.encoding) as f:
+        with open(filepath, encoding=self.config.encoding) as f:
             lines = f.readlines()
 
         for line in lines[1:]:  # Skip header
@@ -236,7 +236,7 @@ class KasirzadehParser(Parser):
 
         return bases
 
-    def _parse_day_file(self, filepath: Path, day: int) -> List[FlightLeg]:
+    def _parse_day_file(self, filepath: Path, day: int) -> list[FlightLeg]:
         """
         Parse a single day_X.csv file.
 
@@ -246,7 +246,7 @@ class KasirzadehParser(Parser):
         """
         flights = []
 
-        with open(filepath, 'r', encoding=self.config.encoding) as f:
+        with open(filepath, encoding=self.config.encoding) as f:
             lines = f.readlines()
 
         for line in lines:
@@ -282,7 +282,7 @@ class KasirzadehParser(Parser):
 
         return flights
 
-    def _parse_all_days(self, path: Path) -> List[FlightLeg]:
+    def _parse_all_days(self, path: Path) -> list[FlightLeg]:
         """Parse all day_X.csv files in the instance directory."""
         all_flights = []
         day = 1
@@ -300,8 +300,8 @@ class KasirzadehParser(Parser):
 
     def _build_network(
         self,
-        bases: List[BaseInfo],
-        flights: List[FlightLeg]
+        bases: list[BaseInfo],
+        flights: list[FlightLeg]
     ) -> Network:
         """
         Build the time-space network from parsed data.
@@ -327,7 +327,7 @@ class KasirzadehParser(Parser):
 
         # Create nodes for each flight event
         # We'll use a time-space network: (airport, time) pairs
-        flight_nodes: Dict[str, Tuple[int, int]] = {}  # leg_id -> (dep_node, arr_node)
+        flight_nodes: dict[str, tuple[int, int]] = {}  # leg_id -> (dep_node, arr_node)
 
         for flight in flights:
             # Departure node
@@ -380,8 +380,8 @@ class KasirzadehParser(Parser):
     def _add_source_sink_arcs(
         self,
         network: Network,
-        flights: List[FlightLeg],
-        flight_nodes: Dict[str, Tuple[int, int]],
+        flights: list[FlightLeg],
+        flight_nodes: dict[str, tuple[int, int]],
         base_names: set,
         source_idx: int,
         sink_idx: int
@@ -431,8 +431,8 @@ class KasirzadehParser(Parser):
     def _add_connection_arcs(
         self,
         network: Network,
-        flights: List[FlightLeg],
-        flight_nodes: Dict[str, Tuple[int, int]]
+        flights: list[FlightLeg],
+        flight_nodes: dict[str, tuple[int, int]]
     ) -> None:
         """Add connection arcs between compatible flights.
 
@@ -441,8 +441,8 @@ class KasirzadehParser(Parser):
         2. OVERNIGHT arcs: Layovers (e.g., 8-24 hours) where crew rests and duty resets
         """
         # Sort flights by arrival time at each airport
-        arrivals_by_airport: Dict[str, List[Tuple[float, str]]] = {}
-        departures_by_airport: Dict[str, List[Tuple[float, str]]] = {}
+        arrivals_by_airport: dict[str, list[tuple[float, str]]] = {}
+        departures_by_airport: dict[str, list[tuple[float, str]]] = {}
 
         for flight in flights:
             arr_time = self._datetime_to_hours(flight.arr_datetime)
@@ -511,10 +511,10 @@ class KasirzadehParser(Parser):
     def _add_base_flight_arcs(
         self,
         network: Network,
-        flights: List[FlightLeg],
-        flight_nodes: Dict[str, Tuple[int, int]],
-        base_source_nodes: Dict[str, int],
-        base_sink_nodes: Dict[str, int]
+        flights: list[FlightLeg],
+        flight_nodes: dict[str, tuple[int, int]],
+        base_source_nodes: dict[str, int],
+        base_sink_nodes: dict[str, int]
     ) -> None:
         """Add arcs connecting base intermediate nodes to flights.
 
@@ -555,7 +555,7 @@ class KasirzadehParser(Parser):
                     base=flight.arr_airport
                 )
 
-    def _create_resources(self) -> List:
+    def _create_resources(self) -> list:
         """Create resource constraints."""
         return [
             AccumulatingResource(
@@ -579,9 +579,9 @@ class KasirzadehParser(Parser):
         self,
         name: str,
         network: Network,
-        resources: List,
-        flights: List[FlightLeg],
-        bases: List[BaseInfo]
+        resources: list,
+        flights: list[FlightLeg],
+        bases: list[BaseInfo]
     ) -> Problem:
         """Build the final Problem object."""
         # Get flight arcs (these need to be covered)

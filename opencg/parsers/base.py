@@ -15,7 +15,7 @@ Design Notes:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from opencg.core.problem import Problem
 
@@ -34,7 +34,7 @@ class ParserConfig:
     validate: bool = True
     verbose: bool = False
     encoding: str = "utf-8"
-    options: Dict[str, Any] = field(default_factory=dict)
+    options: dict[str, Any] = field(default_factory=dict)
 
 
 class Parser(ABC):
@@ -138,7 +138,7 @@ class Parser(ABC):
         Raises:
             FileNotFoundError: If file doesn't exist
         """
-        with open(path, 'r', encoding=self.config.encoding) as f:
+        with open(path, encoding=self.config.encoding) as f:
             return f.read()
 
     def _read_lines(self, path: Union[str, Path]) -> list:
@@ -154,7 +154,7 @@ class Parser(ABC):
         Raises:
             FileNotFoundError: If file doesn't exist
         """
-        with open(path, 'r', encoding=self.config.encoding) as f:
+        with open(path, encoding=self.config.encoding) as f:
             return [line.strip() for line in f]
 
     def __repr__(self) -> str:
@@ -178,7 +178,7 @@ class ParserRegistry:
 
     def __init__(self):
         """Create an empty registry."""
-        self._parsers: Dict[str, type] = {}
+        self._parsers: dict[str, type] = {}
 
     def register(
         self,

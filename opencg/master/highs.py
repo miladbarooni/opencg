@@ -20,7 +20,7 @@ Usage:
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 try:
     import highspy
@@ -29,7 +29,7 @@ except ImportError:
     HIGHS_AVAILABLE = False
 
 from opencg.core.column import Column
-from opencg.core.problem import Problem, CoverType, ObjectiveSense
+from opencg.core.problem import CoverType, ObjectiveSense, Problem
 from opencg.master.base import MasterProblem
 from opencg.master.solution import MasterSolution, SolutionStatus
 
@@ -126,9 +126,9 @@ class HiGHSMasterProblem(MasterProblem):
         self._highs: Optional[highspy.Highs] = None
 
         # Track solver column indices (different from our column indices)
-        self._column_to_solver_idx: Dict[int, int] = {}
+        self._column_to_solver_idx: dict[int, int] = {}
         # Reverse lookup: solver index -> column ID (for O(1) lookup)
-        self._solver_idx_to_column_id: Dict[int, int] = {}
+        self._solver_idx_to_column_id: dict[int, int] = {}
 
         # Track if we need to switch to IP mode
         self._is_ip_mode: bool = False
@@ -310,7 +310,7 @@ class HiGHSMasterProblem(MasterProblem):
 
         return solution
 
-    def _get_dual_values_impl(self) -> Dict[int, float]:
+    def _get_dual_values_impl(self) -> dict[int, float]:
         """Extract dual values from HiGHS."""
         duals = {}
 
@@ -383,7 +383,7 @@ class HiGHSMasterProblem(MasterProblem):
 
     def _add_cut_impl(
         self,
-        coefficients: Dict[int, float],
+        coefficients: dict[int, float],
         sense: str,
         rhs: float
     ) -> int:
@@ -474,7 +474,7 @@ class HiGHSMasterProblem(MasterProblem):
         self._highs.setOptionValue('output_flag', level > 0)
         self._highs.setOptionValue('log_to_console', level > 0)
 
-    def get_model_stats(self) -> Dict[str, Any]:
+    def get_model_stats(self) -> dict[str, Any]:
         """
         Get statistics about the model.
 

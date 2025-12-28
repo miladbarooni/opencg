@@ -32,14 +32,14 @@ References:
 
 import heapq
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from opencg.core.column import Column
-from opencg.core.problem import Problem
 from opencg.core.node import NodeType
+from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
@@ -94,7 +94,7 @@ class LabelingAlgorithm(PricingProblem):
         self._next_label_id: int = 0
 
         # Precomputed arc reduced costs (updated when duals change)
-        self._arc_reduced_costs: Dict[int, float] = {}
+        self._arc_reduced_costs: dict[int, float] = {}
 
         # Source and sink node indices
         self._source_idx: Optional[int] = None
@@ -158,7 +158,7 @@ class LabelingAlgorithm(PricingProblem):
 
         # Priority queue: (reduced_cost, label_id, label)
         # label_id is used for tie-breaking to ensure consistent ordering
-        pq: List[Tuple[float, int, Label]] = []
+        pq: list[tuple[float, int, Label]] = []
         heapq.heappush(pq, (source_label.reduced_cost, source_label.label_id, source_label))
 
         # Track processed labels to avoid duplicates
@@ -318,7 +318,7 @@ class LabelingAlgorithm(PricingProblem):
 
         return new_label
 
-    def _collect_columns(self, sink_labels: List[Label]) -> List[Column]:
+    def _collect_columns(self, sink_labels: list[Label]) -> list[Column]:
         """
         Collect columns from sink labels.
 
@@ -339,7 +339,7 @@ class LabelingAlgorithm(PricingProblem):
         ]
 
         # Sort by reduced cost (most negative first)
-        candidates.sort(key=lambda l: l.reduced_cost)
+        candidates.sort(key=lambda lbl: lbl.reduced_cost)
 
         # Apply limit
         if self._config.max_columns > 0:
@@ -363,7 +363,7 @@ class LabelingAlgorithm(PricingProblem):
     # Advanced Features
     # =========================================================================
 
-    def get_all_sink_labels(self) -> List[Label]:
+    def get_all_sink_labels(self) -> list[Label]:
         """
         Get all labels at the sink (for debugging/analysis).
 
@@ -376,7 +376,7 @@ class LabelingAlgorithm(PricingProblem):
             return []
         return self._label_pool.get_labels(self._sink_idx)
 
-    def get_label_statistics(self) -> Dict[str, Any]:
+    def get_label_statistics(self) -> dict[str, Any]:
         """
         Get statistics about the labeling process.
 
@@ -464,7 +464,7 @@ class HeuristicLabelingAlgorithm(LabelingAlgorithm):
         self._next_label_id = 0
 
         # Track columns found so far (for early termination)
-        columns_found: List[Column] = []
+        columns_found: list[Column] = []
 
         # Create source label
         source_label = self._create_source_label()
@@ -475,7 +475,7 @@ class HeuristicLabelingAlgorithm(LabelingAlgorithm):
         )
 
         # Priority queue
-        pq: List[Tuple[float, int, Label]] = []
+        pq: list[tuple[float, int, Label]] = []
         heapq.heappush(pq, (source_label.reduced_cost, source_label.label_id, source_label))
 
         processed_count = 0
@@ -515,7 +515,7 @@ class HeuristicLabelingAlgorithm(LabelingAlgorithm):
                 node_labels = self._label_pool.get_labels(new_label.node_index)
                 if len(node_labels) >= self._max_labels_per_node:
                     # Only add if better than worst existing
-                    worst_rc = max(l.reduced_cost for l in node_labels)
+                    worst_rc = max(lbl.reduced_cost for lbl in node_labels)
                     if new_label.reduced_cost >= worst_rc:
                         continue
 

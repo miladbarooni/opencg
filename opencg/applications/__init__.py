@@ -32,28 +32,27 @@ Vehicle Routing (CVRP):
 """
 
 # Cutting Stock Problem
+# Crew Pairing Problem
+from opencg.applications.crew_pairing import (
+    CrewPairingConfig,
+    CrewPairingSolution,
+    HomeBaseResource,
+    solve_crew_pairing,
+)
 from opencg.applications.cutting_stock import (
     CuttingStockInstance,
-    CuttingStockPricing,
     CuttingStockMaster,
+    CuttingStockPricing,
     CuttingStockSolution,
     solve_cutting_stock,
 )
 
-# Crew Pairing Problem
-from opencg.applications.crew_pairing import (
-    solve_crew_pairing,
-    CrewPairingConfig,
-    CrewPairingSolution,
-    HomeBaseResource,
-)
-
 # Vehicle Routing Problem
 from opencg.applications.vrp import (
+    CapacityResource,
+    CVRPConfig,
     CVRPInstance,
     CVRPSolution,
-    CVRPConfig,
-    CapacityResource,
     solve_cvrp,
 )
 

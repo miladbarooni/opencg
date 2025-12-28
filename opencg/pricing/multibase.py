@@ -16,21 +16,20 @@ Airline crew scheduling: models, algorithms, and data sets.
 associated with each crew base (giving a total of 3 subproblems)"
 """
 
-from typing import Dict, List, Optional, Set
 import time
+from typing import Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
-from opencg.core.network import Network
 from opencg.core.problem import Problem
 from opencg.pricing.base import (
-    PricingProblem,
     PricingConfig,
+    PricingProblem,
     PricingSolution,
     PricingStatus,
 )
-from opencg.pricing.labeling import LabelingAlgorithm
 from opencg.pricing.label import Label
+from opencg.pricing.labeling import LabelingAlgorithm
 
 
 class MultiBasePricingAlgorithm(PricingProblem):
@@ -74,7 +73,7 @@ class MultiBasePricingAlgorithm(PricingProblem):
         self._bases = self._find_bases()
         self._base_source_arcs = self._find_base_source_arcs()
 
-    def _find_bases(self) -> List[str]:
+    def _find_bases(self) -> list[str]:
         """Find all base names from SOURCE_ARC attributes."""
         bases = set()
         for arc in self._problem.network.arcs:
@@ -84,7 +83,7 @@ class MultiBasePricingAlgorithm(PricingProblem):
                     bases.add(base)
         return sorted(bases)
 
-    def _find_base_source_arcs(self) -> Dict[str, List[int]]:
+    def _find_base_source_arcs(self) -> dict[str, list[int]]:
         """Find source arc indices for each base."""
         base_arcs = {base: [] for base in self._bases}
         for arc in self._problem.network.arcs:
@@ -102,7 +101,7 @@ class MultiBasePricingAlgorithm(PricingProblem):
             Combined PricingSolution from all bases
         """
         start_time = time.time()
-        all_columns: List[Column] = []
+        all_columns: list[Column] = []
         total_labels_created = 0
         total_labels_dominated = 0
 
@@ -214,7 +213,7 @@ class BaseRestrictedLabelingAlgorithm(LabelingAlgorithm):
         problem: Problem,
         config: Optional[PricingConfig] = None,
         allowed_base: str = "",
-        base_source_arcs: Optional[Set[int]] = None
+        base_source_arcs: Optional[set[int]] = None
     ):
         """
         Initialize base-restricted labeling.
