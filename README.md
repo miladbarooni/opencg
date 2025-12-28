@@ -18,19 +18,19 @@ A high-performance, extensible framework for solving optimization problems using
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Python Layer (User-facing API)                                 │
-│  - Problem definition (Network, Resources, Constraints)         │
-│  - Application solvers (Cutting Stock, VRP, Crew Pairing)       │
-│  - Parsers (BPPLIB, Kasirzadeh, Solomon)                        │
-│  - Column generation orchestration                               │
-├─────────────────────────────────────────────────────────────────┤
-│  C++ Core (Performance-critical) via pybind11                   │
-│  - Network/Arc/Node data structures                             │
-│  - SPPRC labeling with dominance pruning                        │
-│  - Parallel labeling (std::async)                               │
-│  - ng-path relaxation, time windows                             │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  Python Layer (User-facing API)                               │
+│  - Problem definition (Network, Resources, Constraints)       │
+│  - Application solvers (Cutting Stock, VRP, Crew Pairing)     │
+│  - Parsers (BPPLIB, Kasirzadeh, Solomon)                      │
+│  - Column generation orchestration                            │
+├───────────────────────────────────────────────────────────────┤
+│  C++ Core (Performance-critical) via pybind11                 │
+│  - Network/Arc/Node data structures                           │
+│  - SPPRC labeling with dominance pruning                      │
+│  - Parallel labeling (std::async)                             │
+│  - ng-path relaxation, time windows                           │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
