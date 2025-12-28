@@ -131,9 +131,9 @@ def solve_instance(
     """
     instance_name = instance_path.name
 
-    print(f"\n{'='*70}")
-    print(f"INSTANCE: {instance_name}")
-    print(f"{'='*70}")
+    print(f"\n{'='*70}", flush=True)
+    print(f"INSTANCE: {instance_name}", flush=True)
+    print(f"{'='*70}", flush=True)
 
     # Parse instance
     parser_config = ParserConfig(
@@ -150,7 +150,7 @@ def solve_instance(
     num_flights = len(problem.cover_constraints)
     num_arcs = problem.network.num_arcs
 
-    print(f"Parsed: {num_flights} flights, {num_arcs} arcs ({parse_time:.2f}s)")
+    print(f"Parsed: {num_flights} flights, {num_arcs} arcs ({parse_time:.2f}s)", flush=True)
 
     # Configure pricing
     pricing_config = PricingConfig(
@@ -183,9 +183,9 @@ def solve_instance(
             num_threads=num_threads,
         )
         cg.set_pricing(pricing)
-        print(f"Using FastPerSourcePricing (C++) with {num_threads} threads")
+        print(f"Using FastPerSourcePricing (C++) with {num_threads} threads", flush=True)
     else:
-        print("Using PerSourcePricing (Python)")
+        print("Using PerSourcePricing (Python)", flush=True)
 
     # Solve
     solve_start = time.time()
@@ -220,46 +220,46 @@ def solve_instance(
             lp_ip_gap = 100.0 * (solution.ip_objective - solution.lp_objective) / solution.lp_objective
 
     # Print results
-    print(f"\n{'Results':-^70}")
-    print(f"  Status:          {solution.status}")
-    print(f"  LP Objective:    {solution.lp_objective:.2f}")
-    print(f"  IP Objective:    {solution.ip_objective:.2f}")
-    print(f"  LP-IP Gap:       {lp_ip_gap:.2f}%")
-    print(f"  Iterations:      {solution.iterations}")
-    print(f"  Total Columns:   {solution.total_columns}")
-    print(f"  Coverage:        {coverage_pct:.2f}% ({len(covered)}/{num_flights})")
-    print(f"  Uncovered:       {len(uncovered)} flights ({uncovered_pct:.2f}%)")
-    print(f"  Parse Time:      {parse_time:.2f}s")
-    print(f"  Solve Time:      {solve_time:.2f}s")
-    print(f"  Total Time:      {parse_time + solve_time:.2f}s")
+    print(f"\n{'Results':-^70}", flush=True)
+    print(f"  Status:          {solution.status}", flush=True)
+    print(f"  LP Objective:    {solution.lp_objective:.2f}", flush=True)
+    print(f"  IP Objective:    {solution.ip_objective:.2f}", flush=True)
+    print(f"  LP-IP Gap:       {lp_ip_gap:.2f}%", flush=True)
+    print(f"  Iterations:      {solution.iterations}", flush=True)
+    print(f"  Total Columns:   {solution.total_columns}", flush=True)
+    print(f"  Coverage:        {coverage_pct:.2f}% ({len(covered)}/{num_flights})", flush=True)
+    print(f"  Uncovered:       {len(uncovered)} flights ({uncovered_pct:.2f}%)", flush=True)
+    print(f"  Parse Time:      {parse_time:.2f}s", flush=True)
+    print(f"  Solve Time:      {solve_time:.2f}s", flush=True)
+    print(f"  Total Time:      {parse_time + solve_time:.2f}s", flush=True)
 
     # Compare with literature if available
     if instance_name in LITERATURE_RESULTS:
         lit = LITERATURE_RESULTS[instance_name]
-        print(f"\n{'Literature Comparison (Kasirzadeh 2017)':-^70}")
-        print(f"  Name:            {lit['name']}")
-        print(f"  LP-IP Gap:       {lit['lp_ip_gap']:.2f}% (ours: {lp_ip_gap:.2f}%)")
-        print(f"  CG Iterations:   {lit['cg_iterations']} (ours: {solution.iterations})")
-        print(f"  CPU Time:        {lit['cpu_time_min']:.2f}min (ours: {solve_time/60:.2f}min)")
-        print(f"  Uncovered:       {lit['uncovered_pct']:.2f}% (ours: {uncovered_pct:.2f}%)")
+        print(f"\n{'Literature Comparison (Kasirzadeh 2017)':-^70}", flush=True)
+        print(f"  Name:            {lit['name']}", flush=True)
+        print(f"  LP-IP Gap:       {lit['lp_ip_gap']:.2f}% (ours: {lp_ip_gap:.2f}%)", flush=True)
+        print(f"  CG Iterations:   {lit['cg_iterations']} (ours: {solution.iterations})", flush=True)
+        print(f"  CPU Time:        {lit['cpu_time_min']:.2f}min (ours: {solve_time/60:.2f}min)", flush=True)
+        print(f"  Uncovered:       {lit['uncovered_pct']:.2f}% (ours: {uncovered_pct:.2f}%)", flush=True)
 
         # Comparison verdict
-        print(f"\n{'Assessment':-^70}")
+        print(f"\n{'Assessment':-^70}", flush=True)
         if coverage_pct >= 99.5:
-            print("  ✅ EXCELLENT: Coverage ≥ 99.5% (literature average: 99.5%)")
+            print("  ✅ EXCELLENT: Coverage ≥ 99.5% (literature average: 99.5%)", flush=True)
         elif coverage_pct >= 99.0:
-            print("  ✅ GOOD: Coverage ≥ 99.0%")
+            print("  ✅ GOOD: Coverage ≥ 99.0%", flush=True)
         elif coverage_pct >= 95.0:
-            print("  ⚠️  ACCEPTABLE: Coverage ≥ 95.0%")
+            print("  ⚠️  ACCEPTABLE: Coverage ≥ 95.0%", flush=True)
         else:
-            print("  ❌ NEEDS IMPROVEMENT: Coverage < 95%")
+            print("  ❌ NEEDS IMPROVEMENT: Coverage < 95%", flush=True)
 
         if solve_time < lit['cpu_time_min'] * 60:
             speedup = (lit['cpu_time_min'] * 60) / solve_time
-            print(f"  ✅ FASTER: {speedup:.1f}x faster than literature")
+            print(f"  ✅ FASTER: {speedup:.1f}x faster than literature", flush=True)
         else:
             slowdown = solve_time / (lit['cpu_time_min'] * 60)
-            print(f"  ⚠️  SLOWER: {slowdown:.1f}x slower than literature")
+            print(f"  ⚠️  SLOWER: {slowdown:.1f}x slower than literature", flush=True)
 
     # Return results dictionary
     return {
@@ -318,14 +318,14 @@ def main():
         print("Error: No instances found")
         return 1
 
-    print("=" * 70)
-    print("OPENCG BENCHMARK SUITE")
-    print("=" * 70)
-    print(f"Instances to test: {len(instances)}")
-    print(f"C++ backend: {'available' if HAS_CPP else 'NOT available'}")
-    print(f"Threads: {args.threads}")
-    print(f"Max iterations: {20 if args.quick else 50}")
-    print()
+    print("=" * 70, flush=True)
+    print("OPENCG BENCHMARK SUITE", flush=True)
+    print("=" * 70, flush=True)
+    print(f"Instances to test: {len(instances)}", flush=True)
+    print(f"C++ backend: {'available' if HAS_CPP else 'NOT available'}", flush=True)
+    print(f"Threads: {args.threads}", flush=True)
+    print(f"Max iterations: {20 if args.quick else 50}", flush=True)
+    print(flush=True)
 
     # Run benchmarks
     all_results = []
@@ -340,18 +340,18 @@ def main():
             )
             all_results.append(result)
         except Exception as e:
-            print(f"\n❌ ERROR solving {instance_path.name}: {e}")
+            print(f"\n❌ ERROR solving {instance_path.name}: {e}", flush=True)
             import traceback
             traceback.print_exc()
 
     # Summary
-    print(f"\n\n{'='*70}")
-    print("SUMMARY")
-    print(f"{'='*70}\n")
+    print(f"\n\n{'='*70}", flush=True)
+    print("SUMMARY", flush=True)
+    print(f"{'='*70}\n", flush=True)
 
     # Table header
-    print(f"{'Instance':<12} {'Flights':<8} {'Coverage':<10} {'Gap':<8} {'Iters':<7} {'Time':<10}")
-    print("-" * 70)
+    print(f"{'Instance':<12} {'Flights':<8} {'Coverage':<10} {'Gap':<8} {'Iters':<7} {'Time':<10}", flush=True)
+    print("-" * 70, flush=True)
 
     total_time = 0.0
     avg_coverage = 0.0
@@ -362,7 +362,7 @@ def main():
               f"{r['coverage_pct']:<9.2f}% "
               f"{r['lp_ip_gap_pct']:<7.2f}% "
               f"{r['iterations']:<7} "
-              f"{r['solve_time_s']:<9.2f}s")
+              f"{r['solve_time_s']:<9.2f}s", flush=True)
 
         total_time += r['total_time_s']
         avg_coverage += r['coverage_pct']
@@ -370,18 +370,18 @@ def main():
     if all_results:
         avg_coverage /= len(all_results)
 
-        print()
-        print(f"Average coverage: {avg_coverage:.2f}%")
-        print(f"Total time: {total_time:.2f}s ({total_time/60:.2f}min)")
+        print(flush=True)
+        print(f"Average coverage: {avg_coverage:.2f}%", flush=True)
+        print(f"Total time: {total_time:.2f}s ({total_time/60:.2f}min)", flush=True)
 
         # Overall assessment
-        print(f"\n{'Overall Assessment':-^70}")
+        print(f"\n{'Overall Assessment':-^70}", flush=True)
         if avg_coverage >= 99.5:
-            print("✅ EXCELLENT: Average coverage ≥ 99.5% (matches/exceeds literature)")
+            print("✅ EXCELLENT: Average coverage ≥ 99.5% (matches/exceeds literature)", flush=True)
         elif avg_coverage >= 99.0:
-            print("✅ GOOD: Average coverage ≥ 99.0%")
+            print("✅ GOOD: Average coverage ≥ 99.0%", flush=True)
         else:
-            print("⚠️  NEEDS WORK: Average coverage < 99.0%")
+            print("⚠️  NEEDS WORK: Average coverage < 99.0%", flush=True)
 
     # Save to CSV if requested
     if args.output and all_results:
@@ -392,13 +392,13 @@ def main():
             writer.writeheader()
             writer.writerows(all_results)
 
-        print(f"\n✅ Results saved to: {output_path}")
+        print(f"\n✅ Results saved to: {output_path}", flush=True)
 
         # Also save as JSON
         json_path = output_path.with_suffix('.json')
         with open(json_path, 'w') as f:
             json.dump(all_results, f, indent=2)
-        print(f"✅ Results saved to: {json_path}")
+        print(f"✅ Results saved to: {json_path}", flush=True)
 
     return 0
 
