@@ -127,6 +127,8 @@ class HiGHSMasterProblem(MasterProblem):
 
         # Track solver column indices (different from our column indices)
         self._column_to_solver_idx: Dict[int, int] = {}
+        # Reverse lookup: solver index -> column ID (for O(1) lookup)
+        self._solver_idx_to_column_id: Dict[int, int] = {}
 
         # Track if we need to switch to IP mode
         self._is_ip_mode: bool = False
@@ -207,9 +209,10 @@ class HiGHSMasterProblem(MasterProblem):
             values
         )
 
-        # Track solver index
+        # Track solver index (both forward and reverse lookup)
         solver_idx = self._highs.getNumCol() - 1
         self._column_to_solver_idx[column.column_id] = solver_idx
+        self._solver_idx_to_column_id[solver_idx] = column.column_id
 
         return solver_idx
 
@@ -447,11 +450,8 @@ class HiGHSMasterProblem(MasterProblem):
                 self._highs.changeColBounds(i, 0.0, 1.0)
 
     def _get_column_id_from_solver_idx(self, solver_idx: int) -> Optional[int]:
-        """Get column ID from solver index (reverse lookup)."""
-        for col_id, idx in self._column_to_solver_idx.items():
-            if idx == solver_idx:
-                return col_id
-        return None
+        """Get column ID from solver index (O(1) reverse lookup)."""
+        return self._solver_idx_to_column_id.get(solver_idx)
 
     def set_time_limit(self, seconds: float) -> None:
         """

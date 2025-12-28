@@ -31,7 +31,7 @@ References:
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from opencg.core.column import Column, ColumnPool
 from opencg.core.problem import Problem
@@ -69,6 +69,8 @@ class CGConfig:
         pricing_config: Configuration for pricing subproblem
         use_stabilization: Whether to use dual stabilization
         stabilization_method: Stabilization method ('boxstep', 'smoothing')
+        require_integral_lp: If True, continue until LP has no artificial columns
+        artificial_tolerance: Max total artificial usage before considering LP integral
     """
     max_iterations: int = 1000
     max_time: float = 3600.0  # 1 hour default
@@ -81,6 +83,8 @@ class CGConfig:
     pricing_config: Optional[PricingConfig] = None
     use_stabilization: bool = False
     stabilization_method: str = 'boxstep'
+    require_integral_lp: bool = False
+    artificial_tolerance: float = 0.01  # Allow up to 1% artificial usage
 
 
 # Type alias for callback functions
@@ -328,6 +332,9 @@ class ColumnGeneration:
 
         big_m = 1e6  # Large cost for artificial columns
 
+        # Track artificial column IDs for later checking
+        self._artificial_column_ids: set = set()
+
         for constraint in self._problem.cover_constraints:
             # Create an artificial column covering just this item
             col = Column(
@@ -338,9 +345,33 @@ class ColumnGeneration:
             )
             col_with_id = self._column_pool.add(col)
             self._master.add_column(col_with_id)
+            self._artificial_column_ids.add(col_with_id.column_id)
 
         if self._config.verbose:
             print(f"  Added {self._problem.num_cover_constraints} artificial columns")
+
+    def _get_artificial_usage(self, master_solution: MasterSolution) -> Tuple[float, set]:
+        """
+        Compute total artificial column usage in LP solution.
+
+        Returns:
+            (total_usage, set of item_ids still using artificial)
+        """
+        if not hasattr(self, '_artificial_column_ids'):
+            return 0.0, set()
+
+        total = 0.0
+        items_on_artificial = set()
+
+        for col_id, val in master_solution.column_values.items():
+            if val > 1e-10 and col_id in self._artificial_column_ids:
+                total += val
+                # Get which item this artificial covers
+                col = self._column_pool.get(col_id)
+                if col:
+                    items_on_artificial.update(col.covered_items)
+
+        return total, items_on_artificial
 
     def _run_column_generation(self, start_time: float) -> CGSolution:
         """
@@ -433,7 +464,47 @@ class ColumnGeneration:
 
             # Check if we found improving columns
             if not pricing_solution.has_negative_reduced_cost:
-                # No improving columns - LP optimal
+                # No improving columns from standard pricing
+
+                # Check if we need to continue for integral LP
+                if self._config.require_integral_lp:
+                    art_usage, items_on_art = self._get_artificial_usage(master_solution)
+                    total_items = len(self._problem.cover_constraints)
+
+                    if art_usage > self._config.artificial_tolerance * total_items:
+                        # Still using too many artificials - try priority pricing
+                        if self._config.verbose:
+                            print(f"Iteration {iteration}: {len(items_on_art)} items on artificial, "
+                                  f"continuing with priority pricing...")
+
+                        # Set priority items for pricing
+                        if hasattr(self._pricing, 'set_priority_items'):
+                            self._pricing.set_priority_items(items_on_art)
+
+                        # Retry pricing with relaxed threshold
+                        old_threshold = self._pricing._config.reduced_cost_threshold
+                        self._pricing._config.reduced_cost_threshold = 1e-3  # Accept near-zero RC
+                        pricing_solution = self._pricing.solve()
+                        self._pricing._config.reduced_cost_threshold = old_threshold
+
+                        if pricing_solution.columns:
+                            # Found columns for priority items
+                            num_added = 0
+                            for col in pricing_solution.columns:
+                                col_with_id = self._column_pool.add(col)
+                                self._master.add_column(col_with_id)
+                                num_added += 1
+
+                            iter_info.num_columns_added = num_added
+
+                            if self._config.verbose:
+                                print(f"  Added {num_added} priority columns")
+
+                            iteration_history.append(iter_info)
+                            self._invoke_callbacks(iter_info)
+                            continue  # Continue the loop
+
+                # Truly optimal - no more columns possible
                 status = CGStatus.OPTIMAL
 
                 # Shrink stabilization if using it

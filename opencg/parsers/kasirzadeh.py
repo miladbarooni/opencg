@@ -31,6 +31,7 @@ EURO Journal on Transportation and Logistics, 6(2), 111-137.
 """
 
 import re
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -132,6 +133,17 @@ class KasirzadehParser(Parser):
 
         # Pairing limits
         self._max_days = self.config.options.get('max_pairing_days', 4)  # Max duty days in pairing
+
+        # Validate: check for connection time gap
+        if self._min_layover > self._max_connection:
+            gap = self._min_layover - self._max_connection
+            warnings.warn(
+                f"Connection time gap detected: connections between "
+                f"{self._max_connection}h and {self._min_layover}h ({gap}h gap) "
+                f"will have no arc, potentially making flights unreachable. "
+                f"Set min_layover_time={self._max_connection} to close the gap.",
+                UserWarning
+            )
 
     def can_parse(self, path: Union[str, Path]) -> bool:
         """
