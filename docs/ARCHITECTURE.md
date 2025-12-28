@@ -12,25 +12,27 @@ OpenCG solves optimization problems using **Column Generation**, which decompose
 2. **Pricing Problem**: Finds new promising columns by solving a shortest path problem
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        Column Generation Loop                            │
-│                                                                          │
-│   ┌─────────────┐     duals (π)      ┌─────────────────┐                │
-│   │   MASTER    │ ─────────────────► │     PRICING     │                │
-│   │   PROBLEM   │                    │     PROBLEM     │                │
-│   │             │ ◄───────────────── │                 │                │
-│   │  (LP/MIP)   │    columns (λ)     │    (SPPRC)      │                │
-│   └─────────────┘                    └─────────────────┘                │
-│         │                                    │                           │
-│         ▼                                    ▼                           │
-│   ┌─────────────┐                    ┌─────────────────┐                │
-│   │   HiGHS/    │                    │    NETWORK      │                │
-│   │   Gurobi/   │                    │                 │                │
-│   │   CPLEX     │                    │  Nodes + Arcs   │                │
-│   └─────────────┘                    │  + Resources    │                │
-│                                      └─────────────────┘                │
-└─────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Column Generation Loop                          │
+│                                                                        │
+│   ┌─────────────┐       duals (π)       ┌─────────────────┐           │
+│   │   MASTER    │ ────────────────────► │     PRICING     │           │
+│   │   PROBLEM   │                       │     PROBLEM     │           │
+│   │             │ ◄──────────────────── │                 │           │
+│   │  (LP/MIP)   │       columns (λ)     │    (SPPRC)      │           │
+│   └─────────────┘                       └─────────────────┘           │
+│         │                                       │                      │
+│         ▼                                       ▼                      │
+│   ┌─────────────┐                       ┌─────────────────┐           │
+│   │   HiGHS/    │                       │    NETWORK      │           │
+│   │   Gurobi/   │                       │                 │           │
+│   │   CPLEX     │                       │  Nodes + Arcs   │           │
+│   └─────────────┘                       │  + Resources    │           │
+│                                         └─────────────────┘           │
+└────────────────────────────────────────────────────────────────────────┘
 ```
+
+**See also:** [Custom Master](custom_master.md) | [Custom Pricing](custom_pricing.md) | [Building Networks](building_networks.md)
 
 ### What Each Component Does
 
@@ -690,3 +692,15 @@ This architecture is designed to support:
 4. **Bidirectional Labeling**: Forward + backward for long paths
 
 The clean separation of concerns makes it straightforward to add these features without modifying existing code.
+
+---
+
+## Related Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Building Networks](building_networks.md) | How to construct networks for your problem |
+| [Custom Resources](custom_resources.md) | Create new resource constraints |
+| [Custom Pricing](custom_pricing.md) | Implement your own pricing algorithms |
+| [Custom Master](custom_master.md) | Use different LP/MIP solvers |
+| [Custom Applications](custom_application.md) | Model new optimization problems |
