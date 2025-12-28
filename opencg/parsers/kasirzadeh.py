@@ -119,12 +119,15 @@ class KasirzadehParser(Parser):
         self._min_connection = self.config.options.get('min_connection_time', 0.5)
         self._max_connection = self.config.options.get('max_connection_time', 4.0)
         self._max_duty = self.config.options.get('max_duty_time', 10.0)
+        self._max_flight = self.config.options.get('max_flight_time', 8.0)  # Max flight time per duty
         self._include_deadheads = self.config.options.get('include_deadheads', False)
 
         # Overnight layover options
         # If connection time exceeds max_connection, it's an overnight layover
         # that resets duty time (crew rests at hotel)
-        self._min_layover = self.config.options.get('min_layover_time', 8.0)  # Minimum rest
+        # NOTE: min_layover should be close to max_connection to avoid "dead zone"
+        # where connections are neither valid connections nor valid layovers
+        self._min_layover = self.config.options.get('min_layover_time', self._max_connection)  # Default to close the gap
         self._max_layover = self.config.options.get('max_layover_time', 24.0)  # Max overnight
 
         # Pairing limits
@@ -484,7 +487,7 @@ class KasirzadehParser(Parser):
                             cost=0.0,  # No additional cost for overnight
                             resource_consumption={
                                 "duty_time": -self._max_duty,  # Reset duty after rest
-                                "flight_time": -8.0,  # Also reset flight time
+                                "flight_time": -self._max_flight,  # Also reset flight time
                                 "duty_days": 1.0,  # Increment day counter
                                 "rest_time": connection_time,  # Track rest duration
                             },
@@ -551,7 +554,7 @@ class KasirzadehParser(Parser):
             AccumulatingResource(
                 name="flight_time",
                 initial=0.0,
-                max_value=8.0  # Typical max flight time
+                max_value=self._max_flight
             ),
             AccumulatingResource(
                 name="duty_days",

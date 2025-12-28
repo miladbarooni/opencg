@@ -161,6 +161,21 @@ public:
     const Network& network() const { return network_; }
     const LabelPool& label_pool() const { return label_pool_; }
 
+    /**
+     * @brief Update the maximum columns to return.
+     * @param max_columns New limit (0 = all with negative RC)
+     */
+    void set_max_columns(size_t max_columns) {
+        config_.max_columns = max_columns;
+    }
+
+    /**
+     * @brief Get current max_columns setting.
+     */
+    size_t get_max_columns() const {
+        return config_.max_columns;
+    }
+
 private:
     /**
      * @brief Solve using priority queue (best-first search).

@@ -137,6 +137,13 @@ Example:
              py::call_guard<py::gil_scoped_release>(),
              "Solve the SPPRC and return columns with negative reduced cost")
 
+        .def("set_max_columns", &LabelingAlgorithm::set_max_columns,
+             py::arg("max_columns"),
+             "Set the maximum number of columns to return (0 = all with negative RC)")
+
+        .def("get_max_columns", &LabelingAlgorithm::get_max_columns,
+             "Get the current max_columns setting")
+
         .def_property_readonly("network", &LabelingAlgorithm::network,
              py::return_value_policy::reference)
 

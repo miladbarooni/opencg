@@ -99,6 +99,7 @@ class CrewPairingConfig:
     pricing_max_labels_per_node: int = 50
     cols_per_source: int = 5
     time_per_source: float = 0.1
+    num_threads: int = 0  # Number of threads for parallel pricing (0=auto)
     solver: str = "highs"  # "highs" or "cplex"
     verbose: bool = False
 
@@ -186,6 +187,7 @@ def solve_crew_pairing(
             max_labels_per_node=config.pricing_max_labels_per_node,
             cols_per_source=config.cols_per_source,
             time_per_source=config.time_per_source,
+            num_threads=config.num_threads,
         )
     except ImportError:
         # Fall back to PerSourcePricing if C++ backend not available
@@ -229,6 +231,8 @@ def solve_crew_pairing(
 
     lp_sol = None
     iterations = 0
+    converged = False
+    all_flights = set(range(len(problem.cover_constraints)))
 
     for iteration in range(config.max_iterations):
         iterations = iteration + 1
@@ -247,19 +251,25 @@ def solve_crew_pairing(
                 print(f"LP not optimal: {lp_sol.status}")
             break
 
-        # Get duals and run pricing
-        duals = master.get_dual_values()
-        pricing.set_dual_values(duals)
-        pricing_sol = pricing.solve()
-
-        # Compute coverage
+        # Compute coverage and identify uncovered flights
         covered = set()
         for col_id, val in lp_sol.column_values.items():
             if val > 1e-6:
                 col = master.get_column(col_id)
                 if col and not col.attributes.get('artificial'):
                     covered.update(col.covered_items)
+
+        uncovered = all_flights - covered
         coverage_pct = 100.0 * len(covered) / len(problem.cover_constraints)
+
+        # Set uncovered flights as priority items for pricing
+        if hasattr(pricing, 'set_priority_items'):
+            pricing.set_priority_items(uncovered)
+
+        # Get duals and run pricing
+        duals = master.get_dual_values()
+        pricing.set_dual_values(duals)
+        pricing_sol = pricing.solve()
 
         if config.verbose and (iteration % 5 == 0 or not pricing_sol.columns):
             print(f"{iteration:>5} {lp_sol.objective_value:>15.2f} "
@@ -270,6 +280,7 @@ def solve_crew_pairing(
         if not pricing_sol.columns:
             if config.verbose:
                 print("Converged - no columns with negative reduced cost")
+            converged = True
             break
 
         # Add new columns
@@ -293,8 +304,26 @@ def solve_crew_pairing(
                     covered.update(col.covered_items)
                     pairings.append(col)
 
-    all_flights = set(range(len(problem.cover_constraints)))
+    # Post-processing: Find columns covering remaining uncovered items
     uncovered = all_flights - covered
+    if uncovered and config.verbose:
+        print(f"\nPost-processing: {len(uncovered)} uncovered flights, checking for available columns...")
+
+    # Iterate through all columns to find ones covering uncovered items
+    for col_id in range(master.num_columns):
+        col = master.get_column(col_id)
+        if col and not col.attributes.get('artificial'):
+            new_coverage = col.covered_items & uncovered
+            if new_coverage:
+                # Found a column covering some uncovered items
+                pairings.append(col)
+                covered.update(col.covered_items)
+                uncovered = all_flights - covered
+                if config.verbose:
+                    print(f"  Added column {col_id} covering {len(new_coverage)} uncovered flights")
+                if not uncovered:
+                    break
+
     coverage_pct = 100.0 * len(covered) / len(problem.cover_constraints)
 
     return CrewPairingSolution(

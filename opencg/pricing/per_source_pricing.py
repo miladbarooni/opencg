@@ -207,11 +207,12 @@ class PerSourcePricing(PricingProblem):
                         if best_rc is None or col.reduced_cost < best_rc:
                             best_rc = col.reduced_cost
 
-            # Early stop if we have enough columns
-            if self._config.max_columns > 0 and len(all_columns) >= self._config.max_columns:
-                break
+            # NOTE: We do NOT check column limit here anymore!
+            # We must process all source arcs to ensure all flights have a chance
+            # to be covered. The column limit is applied at the end.
 
-        # Sort and limit
+        # Sort by reduced cost and limit to max_columns
+        # This keeps the BEST columns, not just the first ones found
         all_columns.sort(key=lambda c: c.reduced_cost)
         if self._config.max_columns > 0 and len(all_columns) > self._config.max_columns:
             all_columns = all_columns[:self._config.max_columns]

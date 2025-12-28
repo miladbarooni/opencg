@@ -89,6 +89,9 @@ class FastPerSourcePricing(PricingProblem):
         self._time_per_source = time_per_source
         self._num_threads = num_threads if num_threads > 0 else os.cpu_count() or 1
 
+        # Priority items - columns covering these get boosted in selection
+        self._priority_items: Set[int] = set()
+
         # Get source arcs with their bases
         self._source_arcs: List[Tuple[int, str]] = []
         for arc in problem.network.arcs:
@@ -117,6 +120,9 @@ class FastPerSourcePricing(PricingProblem):
         self._source_networks: Dict[int, CppNetwork] = {}
         self._source_algorithms: Dict[int, CppLabelingAlgorithm] = {}
         self._source_arc_maps: Dict[int, Dict[int, int]] = {}
+
+        # Mapping from flight arc index to source arcs that include it
+        self._flight_to_sources: Dict[int, Set[int]] = defaultdict(set)
 
         print(f"FastPerSourcePricing: prebuilding {len(self._source_arcs)} networks...")
         build_start = time.time()
@@ -166,6 +172,10 @@ class FastPerSourcePricing(PricingProblem):
             cpp_arc_to_py[cpp_idx] = arc.index
             cpp_idx += 1
 
+            # Track which flights this source can reach
+            if arc.arc_type == ArcType.FLIGHT:
+                self._flight_to_sources[arc.index].add(source_arc_idx)
+
         # Create labeling config
         cpp_config = CppLabelingConfig()
         cpp_config.max_columns = self._cols_per_source
@@ -194,6 +204,14 @@ class FastPerSourcePricing(PricingProblem):
             if source_arc_idx in self._source_algorithms:
                 self._source_algorithms[source_arc_idx].set_dual_values(self._dual_values)
 
+    def set_priority_items(self, items: Set[int]) -> None:
+        """Set items that should be prioritized for coverage.
+
+        Columns covering these items will be preferred during column selection.
+        This is useful for ensuring uncovered flights get columns generated.
+        """
+        self._priority_items = set(items)
+
     def _solve_impl(self) -> PricingSolution:
         """Run labeling on all prebuilt source networks."""
         if self._num_threads > 1:
@@ -216,22 +234,49 @@ class FastPerSourcePricing(PricingProblem):
 
         arc_map = self._source_arc_maps[source_arc_idx]
 
+        # Boost max_columns if this source can reach priority items
+        boosted = False
+        if self._priority_items:
+            # Check if any flight in this network is a priority item
+            flights_in_network = set(arc_map.values())
+            if flights_in_network & self._priority_items:
+                # Boost max_columns 10x for priority sources
+                algo.set_max_columns(self._cols_per_source * 10)
+                boosted = True
+
         # Run labeling (C++ releases GIL during solve)
         result = algo.solve()
 
+        # Reset max_columns if we boosted
+        if boosted:
+            algo.set_max_columns(self._cols_per_source)
+
         # Convert columns
         columns = []
+        threshold = self._config.reduced_cost_threshold or -1e-6
+
         for cpp_label in result.columns:
             col = self._convert_cpp_label(cpp_label, arc_map, base)
-            if col is not None and col.reduced_cost < (self._config.reduced_cost_threshold or -1e-6):
+            if col is None:
+                continue
+
+            # Accept columns with negative reduced cost
+            if col.reduced_cost < threshold:
                 columns.append(col)
+            # Also accept columns covering priority items even with near-zero reduced cost
+            elif self._priority_items and col.covered_items & self._priority_items:
+                # Use relaxed threshold for priority items (to handle numerical precision)
+                if col.reduced_cost < 1e-3:
+                    columns.append(col)
 
         return columns, result.labels_created, result.labels_dominated
 
     def _solve_parallel(self) -> PricingSolution:
         """Run labeling on all sources in parallel using ThreadPoolExecutor.
 
-        Uses batched submission to allow early termination when column limit is reached.
+        IMPORTANT: We process ALL source arcs to ensure complete coverage.
+        The max_columns limit is applied at the end by keeping the best columns,
+        not by early termination which could leave flights uncovered.
         """
         start_time = time.time()
 
@@ -241,18 +286,18 @@ class FastPerSourcePricing(PricingProblem):
         total_labels = 0
         total_dominated = 0
 
-        # Process in batches to allow early termination
+        # Process in batches for efficiency
         batch_size = self._num_threads * 4  # Process 4 batches worth at a time
         source_arcs = list(self._source_arcs)
 
         with ThreadPoolExecutor(max_workers=self._num_threads) as executor:
             idx = 0
             while idx < len(source_arcs):
-                # Check if we've reached column limit
-                if self._config.max_columns > 0 and len(all_columns) >= self._config.max_columns:
-                    break
+                # NOTE: We do NOT check column limit here anymore!
+                # We must process all source arcs to ensure all flights have a chance
+                # to be covered. The column limit is applied at the end.
 
-                # Check time limit
+                # Check time limit (still respect this for very long runs)
                 if self._config.max_time > 0:
                     elapsed = time.time() - start_time
                     if elapsed >= self._config.max_time:
@@ -289,8 +334,15 @@ class FastPerSourcePricing(PricingProblem):
 
                 idx = batch_end
 
-        # Sort and limit
-        all_columns.sort(key=lambda c: c.reduced_cost)
+        # Sort columns: prioritize those covering priority items, then by reduced cost
+        if self._priority_items:
+            all_columns.sort(key=lambda c: (
+                0 if c.covered_items & self._priority_items else 1,
+                c.reduced_cost
+            ))
+        else:
+            all_columns.sort(key=lambda c: c.reduced_cost)
+
         if self._config.max_columns > 0 and len(all_columns) > self._config.max_columns:
             all_columns = all_columns[:self._config.max_columns]
 
@@ -312,7 +364,12 @@ class FastPerSourcePricing(PricingProblem):
         )
 
     def _solve_sequential(self) -> PricingSolution:
-        """Run labeling on all prebuilt source networks sequentially."""
+        """Run labeling on all prebuilt source networks sequentially.
+
+        IMPORTANT: We always process ALL source arcs to ensure complete coverage.
+        The max_columns limit is applied at the end by keeping the best columns,
+        not by early termination which could leave flights uncovered.
+        """
         start_time = time.time()
 
         all_columns: List[Column] = []
@@ -322,15 +379,15 @@ class FastPerSourcePricing(PricingProblem):
         total_dominated = 0
 
         for source_arc_idx, base in self._source_arcs:
-            # Check time limit
+            # Check time limit (still respect this for very long runs)
             if self._config.max_time > 0:
                 elapsed = time.time() - start_time
                 if elapsed >= self._config.max_time:
                     break
 
-            # Check column limit
-            if self._config.max_columns > 0 and len(all_columns) >= self._config.max_columns:
-                break
+            # NOTE: We do NOT check column limit here anymore!
+            # We must process all source arcs to ensure all flights have a chance
+            # to be covered. The column limit is applied at the end.
 
             columns, labels_created, labels_dominated = self._solve_single_source(source_arc_idx, base)
             total_labels += labels_created
@@ -345,8 +402,15 @@ class FastPerSourcePricing(PricingProblem):
                     if best_rc is None or col.reduced_cost < best_rc:
                         best_rc = col.reduced_cost
 
-        # Sort and limit
-        all_columns.sort(key=lambda c: c.reduced_cost)
+        # Sort columns: prioritize those covering priority items, then by reduced cost
+        if self._priority_items:
+            all_columns.sort(key=lambda c: (
+                0 if c.covered_items & self._priority_items else 1,
+                c.reduced_cost
+            ))
+        else:
+            all_columns.sort(key=lambda c: c.reduced_cost)
+
         if self._config.max_columns > 0 and len(all_columns) > self._config.max_columns:
             all_columns = all_columns[:self._config.max_columns]
 
