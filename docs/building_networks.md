@@ -1,6 +1,28 @@
 # Building Networks Guide
 
-This guide explains how to build time-space networks for column generation using OpenCG's core classes. No subclassing required - just use the provided building blocks.
+This guide explains how to build networks for column generation using OpenCG's core classes. No subclassing required - just use the provided building blocks.
+
+---
+
+## OpenCG is Network-Agnostic
+
+**Key principle:** OpenCG doesn't care what your network represents. You bring ANY directed graph structure that makes sense for your problem:
+
+| Problem Type | Nodes Represent | Arcs Represent |
+|--------------|-----------------|----------------|
+| VRP | Customers, depot | Travel between locations |
+| Crew Pairing | (airport, time) pairs | Flights, connections |
+| Cutting Stock | Item types | Cutting decisions |
+| Machine Scheduling | (machine, time) pairs | Job assignments |
+| Shift Scheduling | (employee, time) pairs | Shift segments |
+| **Your Problem** | **Your states** | **Your transitions** |
+
+OpenCG only requires:
+1. A directed graph with **source** and **sink** nodes
+2. **Arc costs** and **resource consumptions**
+3. **Coverage mapping**: which arcs cover which items
+
+---
 
 ## Overview
 
