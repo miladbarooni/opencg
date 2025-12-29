@@ -164,6 +164,7 @@ def get_parser_config():
 def solve_instance(
     instance_path: Path,
     max_iterations: int = 50,
+    max_time: float = 600.0,
     use_cpp: bool = True,
     num_threads: int = 4,
     verbose: bool = False,
@@ -219,7 +220,7 @@ def solve_instance(
     # Configure column generation
     cg_config = CGConfig(
         max_iterations=max_iterations,
-        max_time=600.0,  # 10 minutes max
+        max_time=max_time,
         solve_ip=solve_ip,
         verbose=verbose,
         pricing_config=pricing_config,
@@ -464,6 +465,8 @@ def main():
                         help="Specific instances to run (e.g., instance1 instance2)")
     parser.add_argument('--max-iterations', type=int, default=50,
                         help="Maximum CG iterations (default: 50)")
+    parser.add_argument('--max-time', type=float, default=600.0,
+                        help="Maximum CG solve time in seconds (default: 600 = 10 min)")
     parser.add_argument('--ip-time-limit', type=float, default=60.0,
                         help="Time limit for IP solve in seconds (default: 60)")
     parser.add_argument('--no-ip', action='store_true',
@@ -520,6 +523,7 @@ def main():
     log.info(f"  Boost SPPRC: {'available' if HAS_BOOST else 'NOT available'}")
     log.info(f"  Threads: {args.threads}")
     log.info(f"  Max iterations: {max_iters}")
+    log.info(f"  Max time: {args.max_time}s")
     log.info(f"  Solve IP: {not args.no_ip}")
     log.info(f"  IP time limit: {args.ip_time_limit}s")
     log.info(f"  Output file: {args.output or 'None'}")
@@ -535,6 +539,7 @@ def main():
             result = solve_instance(
                 instance_path,
                 max_iterations=max_iters,
+                max_time=args.max_time,
                 use_cpp=not args.no_cpp,
                 num_threads=args.threads,
                 verbose=args.verbose,
