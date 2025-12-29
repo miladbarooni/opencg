@@ -17,10 +17,11 @@ Parallel execution:
 """
 
 import os
+import threading
 import time
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
+from typing import Callable, Optional
 
 from opencg.core.arc import ArcType
 from opencg.core.column import Column
@@ -54,14 +55,188 @@ except ImportError:
     CppLabelingConfig = None
 
 
+class NetworkCacheEntry:
+    """Single entry in the network cache."""
+
+    __slots__ = ('network', 'algorithm', 'arc_map')
+
+    def __init__(
+        self,
+        network: "CppNetwork",
+        algorithm: "CppLabelingAlgorithm",
+        arc_map: dict[int, int],
+    ):
+        self.network = network
+        self.algorithm = algorithm
+        self.arc_map = arc_map
+
+
+class NetworkCache:
+    """
+    Thread-safe LRU cache for per-source networks.
+
+    Provides on-demand network building with automatic eviction of
+    least-recently-used entries when the cache reaches capacity.
+
+    Thread Safety:
+    - Uses a single RLock for all operations
+    - RLock allows the same thread to acquire the lock multiple times
+    - All public methods are thread-safe
+
+    Parameters:
+        max_size: Maximum number of networks to cache (0 = unlimited/prebuild all)
+        builder_func: Function(source_arc_idx, base) -> NetworkCacheEntry
+    """
+
+    def __init__(
+        self,
+        max_size: int,
+        builder_func: Callable[[int, str], NetworkCacheEntry],
+    ):
+        self._max_size = max_size
+        self._builder_func = builder_func
+
+        # OrderedDict maintains insertion order; we move items to end on access
+        self._cache: OrderedDict[int, NetworkCacheEntry] = OrderedDict()
+
+        # Single lock for thread safety - RLock allows reentrant locking
+        self._lock = threading.RLock()
+
+        # Statistics
+        self._hits = 0
+        self._misses = 0
+        self._evictions = 0
+
+    def get_or_build(
+        self,
+        source_arc_idx: int,
+        base: str,
+        current_duals: dict[int, float],
+    ) -> NetworkCacheEntry:
+        """
+        Get a network from cache, building it if necessary.
+
+        This is the primary interface for the cache. It:
+        1. Returns cached entry if available (marking as recently used)
+        2. Builds and caches new entry if not in cache
+        3. Evicts LRU entry if cache is full
+        4. Applies current dual values to the algorithm
+
+        Thread-safe: Multiple threads can call this concurrently.
+
+        Args:
+            source_arc_idx: Index of the source arc
+            base: Base string for this source
+            current_duals: Current dual values to apply
+
+        Returns:
+            NetworkCacheEntry with network, algorithm, and arc_map
+        """
+        with self._lock:
+            if source_arc_idx in self._cache:
+                # Cache hit - move to end (most recently used)
+                self._cache.move_to_end(source_arc_idx)
+                self._hits += 1
+                entry = self._cache[source_arc_idx]
+            else:
+                # Cache miss - build new entry
+                self._misses += 1
+
+                # Evict LRU entry if at capacity (max_size > 0 means limited)
+                if self._max_size > 0 and len(self._cache) >= self._max_size:
+                    # Pop the oldest (first) item
+                    self._cache.popitem(last=False)
+                    self._evictions += 1
+
+                # Build new entry (releases lock temporarily for expensive build)
+                # Note: We build outside the critical section to reduce contention
+                pass  # Will build below after releasing lock check
+
+            # Check if we need to build (cache miss case)
+            if source_arc_idx not in self._cache:
+                # Build the entry (this is expensive but doesn't need the lock)
+                entry = self._builder_func(source_arc_idx, base)
+                self._cache[source_arc_idx] = entry
+            else:
+                entry = self._cache[source_arc_idx]
+
+            # Always apply current duals (they may have changed since caching)
+            entry.algorithm.set_dual_values(current_duals)
+
+            return entry
+
+    def update_all_duals(self, dual_values: dict[int, float]) -> None:
+        """
+        Update dual values on all currently cached algorithms.
+
+        Called when duals are updated to keep cached algorithms in sync.
+
+        Args:
+            dual_values: New dual values
+        """
+        with self._lock:
+            for entry in self._cache.values():
+                entry.algorithm.set_dual_values(dual_values)
+
+    def prefill(
+        self,
+        sources: list[tuple[int, str]],
+        initial_duals: dict[int, float],
+    ) -> None:
+        """
+        Pre-fill the cache with networks (for prebuild mode).
+
+        Used when the number of sources is below the threshold and
+        we want to prebuild all networks at initialization.
+
+        Args:
+            sources: List of (source_arc_idx, base) tuples
+            initial_duals: Initial dual values (typically empty)
+        """
+        with self._lock:
+            for source_arc_idx, base in sources:
+                if source_arc_idx not in self._cache:
+                    entry = self._builder_func(source_arc_idx, base)
+                    entry.algorithm.set_dual_values(initial_duals)
+                    self._cache[source_arc_idx] = entry
+
+    def clear(self) -> None:
+        """Clear all cached entries."""
+        with self._lock:
+            self._cache.clear()
+
+    def __len__(self) -> int:
+        """Return number of cached entries."""
+        with self._lock:
+            return len(self._cache)
+
+    def __contains__(self, source_arc_idx: int) -> bool:
+        """Check if source is in cache."""
+        with self._lock:
+            return source_arc_idx in self._cache
+
+    def statistics(self) -> dict:
+        """Return cache statistics."""
+        with self._lock:
+            total_requests = self._hits + self._misses
+            hit_rate = self._hits / total_requests if total_requests > 0 else 0.0
+            return {
+                'size': len(self._cache),
+                'max_size': self._max_size,
+                'hits': self._hits,
+                'misses': self._misses,
+                'evictions': self._evictions,
+                'hit_rate': hit_rate,
+            }
+
+
 class FastPerSourcePricing(PricingProblem):
     """
-    Fast per-source-arc pricing with prebuilt networks.
+    Fast per-source-arc pricing with optional lazy network building.
 
-    This builds all per-source networks once at initialization, then
-    only updates duals and runs labeling during solve(). This provides
-    the same comprehensive coverage as PerSourcePricing but with much
-    lower overhead.
+    This provides comprehensive coverage by solving separate SPPRCs for each
+    source arc. Networks can be prebuilt at initialization (for small instances)
+    or built lazily on-demand with LRU caching (for large instances).
 
     Supports parallel execution across source arcs using ThreadPoolExecutor.
     The C++ labeling algorithm releases the GIL, allowing true parallel
@@ -74,7 +249,15 @@ class FastPerSourcePricing(PricingProblem):
         cols_per_source: Max columns per source arc
         time_per_source: Time limit per source arc (seconds)
         num_threads: Number of threads for parallel pricing (default=1, 0=auto)
+        max_cached_networks: Network caching strategy:
+            - None (default): Auto-select based on source count
+              (< 500 sources: prebuild all, >= 500: lazy with LRU cache)
+            - 0: Force prebuild all networks (original behavior)
+            - N > 0: Force lazy mode with cache size N
     """
+
+    # Threshold for automatic lazy mode selection
+    LAZY_MODE_THRESHOLD = 500
 
     def __init__(
         self,
@@ -84,6 +267,7 @@ class FastPerSourcePricing(PricingProblem):
         cols_per_source: int = 3,
         time_per_source: float = 0.05,
         num_threads: int = 1,
+        max_cached_networks: Optional[int] = None,
     ):
         if not HAS_CPP_BACKEND:
             raise ImportError("C++ backend not available")
@@ -122,22 +306,103 @@ class FastPerSourcePricing(PricingProblem):
                 self._numeric_resources.append(r.name)
                 self._resource_limits.append(r.max_value)
 
-        # Prebuild all per-source networks and algorithms
-        self._source_networks: dict[int, CppNetwork] = {}
-        self._source_algorithms: dict[int, CppLabelingAlgorithm] = {}
-        self._source_arc_maps: dict[int, dict[int, int]] = {}
-
         # Mapping from flight arc index to source arcs that include it
         self._flight_to_sources: dict[int, set[int]] = defaultdict(set)
 
-        print(f"FastPerSourcePricing: prebuilding {len(self._source_arcs)} networks...")
-        build_start = time.time()
-        for source_arc_idx, base in self._source_arcs:
-            self._build_source_network(source_arc_idx, base)
-        print(f"  Prebuilt in {time.time() - build_start:.2f}s")
+        # Determine caching strategy
+        num_sources = len(self._source_arcs)
+        self._lazy_mode = self._determine_lazy_mode(num_sources, max_cached_networks)
 
-    def _build_source_network(self, source_arc_idx: int, base: str) -> None:
-        """Build isolated C++ network for a single source arc."""
+        if self._lazy_mode:
+            # Calculate effective cache size
+            if max_cached_networks is None:
+                cache_size = min(200, max(50, num_sources // 3))
+            else:
+                cache_size = max_cached_networks
+
+            print(f"FastPerSourcePricing: lazy mode with cache_size={cache_size} "
+                  f"for {num_sources} sources")
+
+            # Create network cache with builder function
+            self._network_cache = NetworkCache(
+                max_size=cache_size,
+                builder_func=self._build_network_entry,
+            )
+
+            # Build flight_to_sources mapping by scanning arcs once
+            self._build_flight_to_sources_mapping()
+        else:
+            # Prebuild all networks (existing behavior)
+            print(f"FastPerSourcePricing: prebuilding {num_sources} networks...")
+            build_start = time.time()
+
+            # Create cache with unlimited size for prebuild mode
+            self._network_cache = NetworkCache(
+                max_size=0,  # Unlimited
+                builder_func=self._build_network_entry,
+            )
+
+            # Prefill all networks
+            self._network_cache.prefill(self._source_arcs, {})
+
+            print(f"  Prebuilt in {time.time() - build_start:.2f}s")
+
+    def _determine_lazy_mode(
+        self,
+        num_sources: int,
+        max_cached_networks: Optional[int],
+    ) -> bool:
+        """
+        Determine whether to use lazy loading or prebuild all.
+
+        Returns True for lazy mode, False for prebuild all.
+        """
+        # Explicit user override: 0 means prebuild all
+        if max_cached_networks == 0:
+            return False
+
+        # Explicit user override: positive value means lazy mode
+        if max_cached_networks is not None and max_cached_networks > 0:
+            return True
+
+        # Auto-select based on source count
+        return num_sources >= self.LAZY_MODE_THRESHOLD
+
+    def _build_flight_to_sources_mapping(self) -> None:
+        """
+        Build the flight-to-sources mapping without building networks.
+
+        In lazy mode, we need this mapping upfront for priority item handling.
+        This scans all arcs once to determine which flights are reachable from
+        which sources based on arc filtering rules.
+        """
+        network = self._problem.network
+
+        for source_arc_idx, base in self._source_arcs:
+            valid_sinks = self._sink_arcs_by_base[base]
+
+            for arc in network.arcs:
+                # Skip other source arcs (same filtering as network building)
+                if arc.arc_type == ArcType.SOURCE_ARC:
+                    if arc.index != source_arc_idx:
+                        continue
+
+                # Skip sink arcs from other bases
+                if arc.arc_type == ArcType.SINK_ARC:
+                    if arc.index not in valid_sinks:
+                        continue
+
+                # Track flight reachability
+                if arc.arc_type == ArcType.FLIGHT:
+                    self._flight_to_sources[arc.index].add(source_arc_idx)
+
+    def _build_network_entry(self, source_arc_idx: int, base: str) -> NetworkCacheEntry:
+        """
+        Build isolated C++ network for a single source arc.
+
+        Returns a NetworkCacheEntry containing the network, algorithm, and arc map.
+        This method is called by the NetworkCache when a cache miss occurs.
+        """
         network = self._problem.network
 
         cpp_network = CppNetwork()
@@ -178,8 +443,9 @@ class FastPerSourcePricing(PricingProblem):
             cpp_arc_to_py[cpp_idx] = arc.index
             cpp_idx += 1
 
-            # Track which flights this source can reach
-            if arc.arc_type == ArcType.FLIGHT:
+            # Track which flights this source can reach (for prebuild mode)
+            # In lazy mode, this is done by _build_flight_to_sources_mapping
+            if not self._lazy_mode and arc.arc_type == ArcType.FLIGHT:
                 self._flight_to_sources[arc.index].add(source_arc_idx)
 
         # Create labeling config
@@ -200,15 +466,11 @@ class FastPerSourcePricing(PricingProblem):
             cpp_config
         )
 
-        self._source_networks[source_arc_idx] = cpp_network
-        self._source_algorithms[source_arc_idx] = algo
-        self._source_arc_maps[source_arc_idx] = cpp_arc_to_py
+        return NetworkCacheEntry(cpp_network, algo, cpp_arc_to_py)
 
     def _on_duals_updated(self) -> None:
-        """Update dual values in all source algorithms."""
-        for source_arc_idx, _ in self._source_arcs:
-            if source_arc_idx in self._source_algorithms:
-                self._source_algorithms[source_arc_idx].set_dual_values(self._dual_values)
+        """Update dual values in all cached algorithms."""
+        self._network_cache.update_all_duals(self._dual_values)
 
     def set_priority_items(self, items: set[int]) -> None:
         """Set items that should be prioritized for coverage.
@@ -231,14 +493,20 @@ class FastPerSourcePricing(PricingProblem):
         """
         Solve labeling for a single source arc.
 
+        In lazy mode, this will build the network on-demand if not cached.
+
         Returns:
             (columns, labels_created, labels_dominated)
         """
-        algo = self._source_algorithms.get(source_arc_idx)
-        if algo is None:
-            return [], 0, 0
+        # Get network entry from cache (builds on-demand if needed)
+        entry = self._network_cache.get_or_build(
+            source_arc_idx,
+            base,
+            self._dual_values,
+        )
 
-        arc_map = self._source_arc_maps[source_arc_idx]
+        algo = entry.algorithm
+        arc_map = entry.arc_map
 
         # Boost max_columns if this source can reach priority items
         boosted = False

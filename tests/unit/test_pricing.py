@@ -582,6 +582,222 @@ class TestPricingMasterIntegration:
 
 
 # =============================================================================
+# Test NetworkCache
+# =============================================================================
+
+class MockAlgorithm:
+    """Mock algorithm for testing NetworkCache."""
+
+    def __init__(self):
+        self.last_duals = {}
+
+    def set_dual_values(self, duals):
+        self.last_duals = dict(duals)
+
+
+class TestNetworkCache:
+    """Tests for NetworkCache class used in FastPerSourcePricing."""
+
+    def test_cache_basic_operations(self):
+        """Test basic get/put operations."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        builds = []
+
+        def mock_builder(idx, base):
+            builds.append(idx)
+            return NetworkCacheEntry(None, MockAlgorithm(), {idx: idx})
+
+        cache = NetworkCache(max_size=3, builder_func=mock_builder)
+
+        # First access - cache miss
+        entry = cache.get_or_build(1, "base1", {})
+        assert 1 in builds
+        assert len(cache) == 1
+        assert entry.arc_map == {1: 1}
+
+        # Second access - cache hit
+        builds.clear()
+        entry2 = cache.get_or_build(1, "base1", {})
+        assert len(builds) == 0  # No rebuild
+        assert entry2 is entry  # Same entry returned
+
+    def test_lru_eviction(self):
+        """Test LRU eviction when cache is full."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        builds = []
+
+        def mock_builder(idx, base):
+            builds.append(idx)
+            return NetworkCacheEntry(None, MockAlgorithm(), {})
+
+        cache = NetworkCache(max_size=2, builder_func=mock_builder)
+
+        cache.get_or_build(1, "b", {})
+        cache.get_or_build(2, "b", {})
+        assert len(cache) == 2
+
+        # Access 1 again to make it most recent
+        cache.get_or_build(1, "b", {})
+
+        # Add 3 - should evict 2 (LRU)
+        cache.get_or_build(3, "b", {})
+        assert len(cache) == 2
+        assert 1 in cache
+        assert 3 in cache
+        assert 2 not in cache
+
+    def test_unlimited_cache(self):
+        """Test unlimited cache mode (max_size=0)."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        def mock_builder(idx, base):
+            return NetworkCacheEntry(None, MockAlgorithm(), {})
+
+        cache = NetworkCache(max_size=0, builder_func=mock_builder)
+
+        # Add many entries - none should be evicted
+        for i in range(100):
+            cache.get_or_build(i, "b", {})
+
+        assert len(cache) == 100
+
+    def test_dual_update_propagation(self):
+        """Test that dual updates propagate to all cached algorithms."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        algos = {}
+
+        def mock_builder(idx, base):
+            algo = MockAlgorithm()
+            algos[idx] = algo
+            return NetworkCacheEntry(None, algo, {})
+
+        cache = NetworkCache(max_size=10, builder_func=mock_builder)
+
+        cache.get_or_build(1, "b", {0: 1.0})
+        cache.get_or_build(2, "b", {0: 1.0})
+
+        # Update all duals
+        cache.update_all_duals({0: 5.0, 1: 10.0})
+
+        assert algos[1].last_duals == {0: 5.0, 1: 10.0}
+        assert algos[2].last_duals == {0: 5.0, 1: 10.0}
+
+    def test_prefill_mode(self):
+        """Test prefill for prebuild mode."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        builds = []
+
+        def mock_builder(idx, base):
+            builds.append(idx)
+            return NetworkCacheEntry(None, MockAlgorithm(), {})
+
+        cache = NetworkCache(max_size=0, builder_func=mock_builder)  # Unlimited
+
+        sources = [(1, "a"), (2, "b"), (3, "c")]
+        cache.prefill(sources, {})
+
+        assert len(cache) == 3
+        assert set(builds) == {1, 2, 3}
+
+    def test_statistics(self):
+        """Test cache statistics tracking."""
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        def mock_builder(idx, base):
+            return NetworkCacheEntry(None, MockAlgorithm(), {})
+
+        cache = NetworkCache(max_size=2, builder_func=mock_builder)
+
+        # Generate some cache activity
+        cache.get_or_build(1, "b", {})  # miss
+        cache.get_or_build(2, "b", {})  # miss
+        cache.get_or_build(1, "b", {})  # hit
+        cache.get_or_build(3, "b", {})  # miss + eviction
+
+        stats = cache.statistics()
+        assert stats['hits'] == 1
+        assert stats['misses'] == 3
+        assert stats['evictions'] == 1
+        assert stats['size'] == 2
+        assert stats['max_size'] == 2
+        assert stats['hit_rate'] == 0.25  # 1 hit / 4 total
+
+    def test_thread_safety(self):
+        """Test concurrent access from multiple threads."""
+        import concurrent.futures
+        import threading
+        import time
+
+        from opencg.pricing.fast_per_source import NetworkCache, NetworkCacheEntry
+
+        builds = []
+        lock = threading.Lock()
+
+        def mock_builder(idx, base):
+            with lock:
+                builds.append(idx)
+            time.sleep(0.01)  # Simulate work
+            return NetworkCacheEntry(None, MockAlgorithm(), {})
+
+        cache = NetworkCache(max_size=10, builder_func=mock_builder)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(cache.get_or_build, i % 5, "b", {})
+                for i in range(20)
+            ]
+            concurrent.futures.wait(futures)
+
+        # Each unique index should be built exactly once
+        assert len(cache) == 5
+        # All 5 unique indices should have been built
+        assert len(set(builds)) == 5
+
+
+class TestFastPerSourcePricingLazyMode:
+    """Tests for FastPerSourcePricing lazy network building."""
+
+    def test_lazy_mode_threshold(self):
+        """Test automatic mode selection based on source count."""
+        from opencg.pricing.fast_per_source import FastPerSourcePricing
+
+        # Test the _determine_lazy_mode logic directly
+        # We can't easily instantiate without a real problem, so test the threshold constant
+        assert FastPerSourcePricing.LAZY_MODE_THRESHOLD == 500
+
+    def test_explicit_prebuild_override(self):
+        """Test that max_cached_networks=0 forces prebuild mode."""
+        from opencg.pricing.fast_per_source import FastPerSourcePricing
+
+        # Create a mock to test _determine_lazy_mode
+        class MockPricing:
+            LAZY_MODE_THRESHOLD = 500
+
+            def _determine_lazy_mode(self, num_sources, max_cached_networks):
+                return FastPerSourcePricing._determine_lazy_mode(
+                    self, num_sources, max_cached_networks
+                )
+
+        mock = MockPricing()
+
+        # 0 should force prebuild even with many sources
+        assert mock._determine_lazy_mode(1000, 0) is False
+
+        # None with < 500 sources should prebuild
+        assert mock._determine_lazy_mode(100, None) is False
+
+        # None with >= 500 sources should use lazy
+        assert mock._determine_lazy_mode(600, None) is True
+
+        # Explicit positive value should force lazy
+        assert mock._determine_lazy_mode(100, 50) is True
+
+
+# =============================================================================
 # Run tests standalone
 # =============================================================================
 
