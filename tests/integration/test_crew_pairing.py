@@ -69,6 +69,7 @@ def _quick_cg_solve(problem, max_iter: int = 10, use_cpp: bool = True) -> float:
             cols_per_source=5,
             time_per_source=0.1,
             num_threads=4,
+            max_cached_networks=0,  # Force prebuild for test consistency
         )
     else:
         pricing = Pricing(
