@@ -168,6 +168,8 @@ def solve_instance(
     num_threads: int = 4,
     verbose: bool = False,
     logger: Optional[logging.Logger] = None,
+    solve_ip: bool = True,
+    ip_time_limit: float = 60.0,
 ) -> Dict:
     """
     Solve a single instance and return results.
@@ -218,12 +220,17 @@ def solve_instance(
     cg_config = CGConfig(
         max_iterations=max_iterations,
         max_time=600.0,  # 10 minutes max
-        solve_ip=True,
+        solve_ip=solve_ip,
         verbose=verbose,
         pricing_config=pricing_config,
     )
 
     cg = ColumnGeneration(problem, cg_config)
+
+    # Set IP time limit on master problem
+    if solve_ip and ip_time_limit > 0:
+        cg._master.set_time_limit(ip_time_limit)
+        log.info(f"IP time limit: {ip_time_limit}s")
 
     # Set fast pricing if available
     setup_start = time.time()
@@ -407,6 +414,10 @@ def main():
                         help="Specific instances to run (e.g., instance1 instance2)")
     parser.add_argument('--max-iterations', type=int, default=50,
                         help="Maximum CG iterations (default: 50)")
+    parser.add_argument('--ip-time-limit', type=float, default=60.0,
+                        help="Time limit for IP solve in seconds (default: 60)")
+    parser.add_argument('--no-ip', action='store_true',
+                        help="Skip IP solve (only solve LP)")
     args = parser.parse_args()
 
     # Setup logging
@@ -459,6 +470,8 @@ def main():
     log.info(f"  Boost SPPRC: {'available' if HAS_BOOST else 'NOT available'}")
     log.info(f"  Threads: {args.threads}")
     log.info(f"  Max iterations: {max_iters}")
+    log.info(f"  Solve IP: {not args.no_ip}")
+    log.info(f"  IP time limit: {args.ip_time_limit}s")
     log.info(f"  Output file: {args.output or 'None'}")
 
     # Run benchmarks
@@ -476,6 +489,8 @@ def main():
                 num_threads=args.threads,
                 verbose=args.verbose,
                 logger=log,
+                solve_ip=not args.no_ip,
+                ip_time_limit=args.ip_time_limit,
             )
             all_results.append(result)
         except Exception as e:
