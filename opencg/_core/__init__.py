@@ -35,12 +35,23 @@ try:
         # Network types
         Network,
         Node,
+        # Check if Boost is available
+        HAS_BOOST as _HAS_BOOST,
     )
     HAS_CPP_BACKEND = True
+    HAS_BOOST = _HAS_BOOST
+
+    # Try to import Boost SPPRC solver (only available if compiled with Boost)
+    if HAS_BOOST:
+        from opencg._core._core import BoostSPPRCSolver
+    else:
+        BoostSPPRCSolver = None
 
 except ImportError:
     # C++ extension not available, flag for fallback
     HAS_CPP_BACKEND = False
+    HAS_BOOST = False
+    BoostSPPRCSolver = None
 
     # Import placeholders that will raise informative errors
     def _not_available(*args, **kwargs):
@@ -62,6 +73,7 @@ except ImportError:
 
 __all__ = [
     'HAS_CPP_BACKEND',
+    'HAS_BOOST',
     # Network
     'Network',
     'Arc',
@@ -73,4 +85,6 @@ __all__ = [
     'LabelingAlgorithm',
     'LabelingConfig',
     'LabelingResult',
+    # Boost (optional)
+    'BoostSPPRCSolver',
 ]

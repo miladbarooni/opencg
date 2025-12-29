@@ -34,9 +34,10 @@ from opencg.pricing.base import (
 
 # Try to import Boost SPPRC solver
 try:
-    from opencg._core import HAS_CPP_BACKEND, BoostSPPRCSolver
+    from opencg._core import HAS_CPP_BACKEND, HAS_BOOST, BoostSPPRCSolver
 except ImportError:
     HAS_CPP_BACKEND = False
+    HAS_BOOST = False
     BoostSPPRCSolver = None
 
 
@@ -61,8 +62,11 @@ class PerSourceBoostPricing(PricingProblem):
         config: Optional[PricingConfig] = None,
         cols_per_source: int = 3,
     ):
-        if not HAS_CPP_BACKEND or BoostSPPRCSolver is None:
-            raise ImportError("Boost SPPRC solver not available")
+        if not HAS_BOOST or BoostSPPRCSolver is None:
+            raise ImportError(
+                "Boost SPPRC solver not available. "
+                "Install Boost 1.70+ and rebuild with: pip install -e ."
+            )
 
         super().__init__(problem, config)
 

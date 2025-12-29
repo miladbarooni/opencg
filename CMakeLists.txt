@@ -19,12 +19,20 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 option(BUILD_PYTHON_BINDINGS "Build Python bindings using pybind11" ON)
 option(BUILD_TESTS "Build C++ tests" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(USE_BOOST "Use Boost Graph Library for SPPRC (optional)" ON)
 
-# Find Boost (for r_c_shortest_paths)
-find_package(Boost 1.70 REQUIRED)
-if(Boost_FOUND)
-    message(STATUS "Boost found: ${Boost_VERSION}")
-    include_directories(${Boost_INCLUDE_DIRS})
+# Find Boost (optional - for r_c_shortest_paths)
+if(USE_BOOST)
+    find_package(Boost 1.70 QUIET)
+    if(Boost_FOUND)
+        message(STATUS "Boost found: ${Boost_VERSION} - Boost SPPRC enabled")
+        include_directories(${Boost_INCLUDE_DIRS})
+        add_definitions(-DHAS_BOOST)
+    else()
+        message(STATUS "Boost not found - building without Boost SPPRC (use pure Python fallback)")
+    endif()
+else()
+    message(STATUS "Boost disabled by option - building without Boost SPPRC")
 endif()
 
 # Find packages
@@ -63,13 +71,20 @@ if(BUILD_PYTHON_BINDINGS)
     # Find threading support
     find_package(Threads REQUIRED)
 
-    pybind11_add_module(_core
+    # Core binding sources (always included)
+    set(BINDING_SOURCES
         src/bindings/module.cpp
         src/bindings/label_bindings.cpp
         src/bindings/pricing_bindings.cpp
-        src/bindings/boost_spprc_bindings.cpp
         src/bindings/parallel_pricing_bindings.cpp
     )
+
+    # Add Boost SPPRC bindings if Boost is available
+    if(Boost_FOUND)
+        list(APPEND BINDING_SOURCES src/bindings/boost_spprc_bindings.cpp)
+    endif()
+
+    pybind11_add_module(_core ${BINDING_SOURCES})
     target_link_libraries(_core PRIVATE opencg_core Threads::Threads)
 
     # Install the module to the opencg package
@@ -105,5 +120,6 @@ message(STATUS "OpenCG C++ Configuration:")
 message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  C++ standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Python bindings: ${BUILD_PYTHON_BINDINGS}")
+message(STATUS "  Boost SPPRC: ${Boost_FOUND}")
 message(STATUS "  Tests: ${BUILD_TESTS}")
 message(STATUS "  Benchmarks: ${BUILD_BENCHMARKS}")

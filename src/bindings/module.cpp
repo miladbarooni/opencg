@@ -10,8 +10,11 @@ namespace py = pybind11;
 // Forward declarations
 void init_label_bindings(py::module_& m);
 void init_pricing_bindings(py::module_& m);
-void init_boost_spprc_bindings(py::module_& m);
 void init_parallel_pricing_bindings(py::module_& m);
+
+#ifdef HAS_BOOST
+void init_boost_spprc_bindings(py::module_& m);
+#endif
 
 PYBIND11_MODULE(_core, m) {
     m.doc() = R"doc(
@@ -35,9 +38,18 @@ Python implementations when performance is critical.
     m.attr("__version__") = "0.1.0";
     m.attr("HAS_CPP_BACKEND") = true;
 
+#ifdef HAS_BOOST
+    m.attr("HAS_BOOST") = true;
+#else
+    m.attr("HAS_BOOST") = false;
+#endif
+
     // Initialize submodules
     init_label_bindings(m);
     init_pricing_bindings(m);
-    init_boost_spprc_bindings(m);
     init_parallel_pricing_bindings(m);
+
+#ifdef HAS_BOOST
+    init_boost_spprc_bindings(m);
+#endif
 }
