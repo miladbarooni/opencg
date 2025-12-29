@@ -263,75 +263,43 @@ def solve_instance(
     pricing_total_time = getattr(solution, 'pricing_time', None)
     lp_total_time = getattr(solution, 'lp_time', None)
 
-    # Analyze solution - use IP values if available, otherwise LP
+    # Analyze solution - compute flight coverage from solution columns
     covered = set()
     uncovered = set()
 
-    # Choose column values to analyze (IP if available, else LP)
-    if hasattr(solution, 'ip_column_values') and solution.ip_column_values:
-        column_values = solution.ip_column_values
-        is_ip_solution = True
-        log.debug(f"Using IP column values: {len(column_values)} columns")
-    elif hasattr(solution, 'lp_column_values') and solution.lp_column_values:
-        column_values = solution.lp_column_values
-        is_ip_solution = False
-        log.debug(f"Using LP column values: {len(column_values)} columns")
-    else:
-        column_values = {}
-        is_ip_solution = True
-        log.warning("No column values available - coverage will be 0%")
+    # Get active columns from solution (those with positive value)
+    active_columns = solution.columns if solution.columns else []
+    log.debug(f"Solution has {len(active_columns)} active columns")
 
-    # For LP solutions, we need to sum fractional values per flight
+    # Sum fractional coverage per flight
     # A flight is covered if the sum of column values covering it >= threshold
-    # For IP solutions, check if any column with value > 0.5 covers the flight
-    if is_ip_solution:
-        # IP: Binary check - any selected column covers the flight
-        for item_id in range(num_flights):
-            item_covered = False
-            for col_id, val in column_values.items():
-                if val > 0.5:
-                    col = cg._column_pool.get(col_id)
-                    if col and item_id in col.covered_items:
-                        item_covered = True
-                        break
-            if item_covered:
-                covered.add(item_id)
-            else:
-                uncovered.add(item_id)
-    else:
-        # LP: Sum fractional coverage per flight
-        flight_coverage = {i: 0.0 for i in range(num_flights)}
-        cols_with_positive_val = 0
-        cols_with_items = 0
-        total_items_covered = 0
-        for col_id, val in column_values.items():
-            if val > 1e-6:  # Only consider columns with positive value
-                cols_with_positive_val += 1
-                col = cg._column_pool.get(col_id)
-                if col:
-                    cols_with_items += 1
-                    for item_id in col.covered_items:
-                        if item_id < num_flights:
-                            flight_coverage[item_id] += val
-                            total_items_covered += 1
+    flight_coverage = {i: 0.0 for i in range(num_flights)}
+    total_items_covered = 0
 
-        log.debug(f"LP coverage analysis: {cols_with_positive_val} cols with val > 0, "
-                  f"{cols_with_items} cols found in pool, {total_items_covered} item-coverage pairs")
+    for col in active_columns:
+        val = col.value if col.value is not None else 0.0
+        if val > 1e-6:  # Only consider columns with positive value
+            for item_id in col.covered_items:
+                if item_id < num_flights:
+                    flight_coverage[item_id] += val
+                    total_items_covered += 1
 
-        # A flight is covered if total coverage >= 0.99 (allowing small numerical tolerance)
-        coverage_threshold = 0.99
-        for item_id in range(num_flights):
-            if flight_coverage[item_id] >= coverage_threshold:
-                covered.add(item_id)
-            else:
-                uncovered.add(item_id)
+    log.debug(f"Coverage analysis: {len(active_columns)} active cols, {total_items_covered} item-coverage pairs")
 
-        # Log some coverage statistics for debugging
-        if uncovered:
-            min_coverage = min(flight_coverage[i] for i in uncovered) if uncovered else 0
-            max_coverage = max(flight_coverage[i] for i in uncovered) if uncovered else 0
-            avg_coverage = sum(flight_coverage[i] for i in uncovered) / len(uncovered) if uncovered else 0
-            log.info(f"Uncovered flights ({len(uncovered)}): coverage range {min_coverage:.4f} - {max_coverage:.4f}, avg {avg_coverage:.4f}")
+    # A flight is covered if total coverage >= 0.99 (allowing small numerical tolerance)
+    coverage_threshold = 0.99
+    for item_id in range(num_flights):
+        if flight_coverage[item_id] >= coverage_threshold:
+            covered.add(item_id)
+        else:
+            uncovered.add(item_id)
+
+    # Log some coverage statistics for debugging
+    if uncovered:
+        min_coverage = min(flight_coverage[i] for i in uncovered) if uncovered else 0
+        max_coverage = max(flight_coverage[i] for i in uncovered) if uncovered else 0
+        avg_coverage = sum(flight_coverage[i] for i in uncovered) / len(uncovered) if uncovered else 0
+        log.info(f"Uncovered flights ({len(uncovered)}): coverage range {min_coverage:.4f} - {max_coverage:.4f}, avg {avg_coverage:.4f}")
 
     coverage_pct = 100.0 * len(covered) / num_flights
     uncovered_pct = 100.0 - coverage_pct
