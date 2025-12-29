@@ -263,14 +263,25 @@ def solve_instance(
     pricing_total_time = getattr(solution, 'pricing_time', None)
     lp_total_time = getattr(solution, 'lp_time', None)
 
-    # Analyze solution
+    # Analyze solution - use IP values if available, otherwise LP
     covered = set()
     uncovered = set()
 
+    # Choose column values to analyze (IP if available, else LP)
+    if hasattr(solution, 'ip_column_values') and solution.ip_column_values:
+        column_values = solution.ip_column_values
+        threshold = 0.5  # Binary threshold for IP
+    elif hasattr(solution, 'lp_column_values') and solution.lp_column_values:
+        column_values = solution.lp_column_values
+        threshold = 0.001  # Small threshold for LP (fractional)
+    else:
+        column_values = {}
+        threshold = 0.5
+
     for item_id in range(num_flights):
         item_covered = False
-        for col_id, val in solution.ip_column_values.items():
-            if val > 0.5:
+        for col_id, val in column_values.items():
+            if val > threshold:
                 col = cg._column_pool.get(col_id)
                 if col and item_id in col.covered_items:
                     item_covered = True
@@ -286,9 +297,11 @@ def solve_instance(
 
     # Calculate LP-IP gap (if both available)
     lp_ip_gap = 0.0
-    if solution.lp_objective and solution.ip_objective:
-        if solution.lp_objective > 0:
-            lp_ip_gap = 100.0 * (solution.ip_objective - solution.lp_objective) / solution.lp_objective
+    ip_objective = getattr(solution, 'ip_objective', None)
+    lp_objective = getattr(solution, 'lp_objective', None)
+    if lp_objective and ip_objective:
+        if lp_objective > 0:
+            lp_ip_gap = 100.0 * (ip_objective - lp_objective) / lp_objective
 
     # Calculate per-iteration averages
     avg_time_per_iter = solve_time / max(solution.iterations, 1)
@@ -369,8 +382,8 @@ def solve_instance(
         'num_arcs': num_arcs,
         'num_nodes': num_nodes,
         'num_source_arcs': num_source_arcs,
-        'lp_objective': solution.lp_objective,
-        'ip_objective': solution.ip_objective,
+        'lp_objective': lp_objective,
+        'ip_objective': ip_objective,
         'lp_ip_gap_pct': lp_ip_gap,
         'iterations': solution.iterations,
         'total_columns': solution.total_columns,
