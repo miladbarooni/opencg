@@ -245,11 +245,30 @@ opencg/
 - **pybind11**: C++/Python bindings (build only)
 - **matplotlib** (optional): Visualization in notebooks
 
+## Benchmark Results
+
+### Crew Pairing (Kasirzadeh et al. 2017)
+
+Tested on Windows 10, Intel Core i7-8700 (6 cores), 4 threads:
+
+| Instance | Flights | Our Time | Lit. Time | Speedup | Coverage | Status |
+|----------|---------|----------|-----------|---------|----------|--------|
+| I1-727   | 1,013   | 82s      | 150s      | **1.83x faster** | 100% | OPTIMAL |
+| I2-DC9   | 1,500   | 294s     | 260s      | 0.89x   | 100% | OPTIMAL |
+| I3-D94   | 1,855   | 704s     | 548s      | 0.78x   | 100% | OPTIMAL |
+
+**Key findings**:
+- **100% flight coverage** on all instances (matches literature)
+- **10-140x fewer iterations** (11-21 vs 239-1968 in literature)
+- **Competitive runtime** - faster on small instances, within 20-30% on larger ones
+
+See [PROJECT_STATUS.md](PROJECT_STATUS.md) for detailed results, known issues, and roadmap.
+
 ## Performance Notes
 
 - The C++ backend provides 10-100x speedup over pure Python for labeling
 - GIL is released during C++ solve(), enabling true parallel execution
-- Per-source pricing achieves higher coverage than single-source for crew pairing
+- **Per-source pricing** is the key innovation achieving 100% coverage for crew pairing
 - Use `max_labels_per_node` for beam search (faster but heuristic)
 
 ## License

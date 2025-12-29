@@ -80,69 +80,77 @@ def get_system_info() -> Dict:
 
 
 # Literature results from Kasirzadeh et al. (2017)
-# Table 4 and 5 from the paper
+# cpu_time_min is from Table 2 (pairing CPU time column)
+# cg_iterations and other metrics from Tables 4-5
 LITERATURE_RESULTS = {
     'instance1': {
         'name': 'I1-727',
-        'flights': 727,
+        'num_pairings': 172,
+        'num_pilots': 33,
         'lp_ip_gap': 0.00,
         'bnp_nodes': 7,
         'cg_iterations': 239,
-        'cpu_time_min': 0.16,
+        'cpu_time_min': 2.50,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.00,
     },
     'instance2': {
         'name': 'I2-DC9',
-        'flights': 709,
+        'num_pairings': 303,
+        'num_pilots': 34,
         'lp_ip_gap': 0.18,
         'bnp_nodes': 30,
         'cg_iterations': 1968,
-        'cpu_time_min': 0.45,
+        'cpu_time_min': 4.34,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.00,
     },
     'instance3': {
         'name': 'I3-D94',
-        'flights': 856,
+        'num_pairings': 274,
+        'num_pilots': 47,
         'lp_ip_gap': 0.02,
         'bnp_nodes': 14,
         'cg_iterations': 466,
-        'cpu_time_min': 1.81,
+        'cpu_time_min': 9.14,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.00,
     },
     'instance4': {
         'name': 'I4-D95',
-        'flights': 1799,
+        'num_pairings': 1079,
+        'num_pilots': 145,
         'lp_ip_gap': 0.38,
         'bnp_nodes': 129,
         'cg_iterations': 2417,
-        'cpu_time_min': 47.59,
+        'cpu_time_min': 393.58,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.04,
     },
     'instance5': {
         'name': 'I5-757',
-        'flights': 2111,
+        'num_pairings': 1497,
+        'num_pilots': 247,
         'lp_ip_gap': 2.91,
         'bnp_nodes': 172,
         'cg_iterations': 4531,
-        'cpu_time_min': 149.58,
+        'cpu_time_min': 67.80,  # Table 2: CPU time (pairing)
         'uncovered_pct': 1.81,
     },
     'instance6': {
         'name': 'I6-319',
-        'flights': 2098,
+        'num_pairings': 1187,
+        'num_pilots': 223,
         'lp_ip_gap': 0.49,
         'bnp_nodes': 168,
         'cg_iterations': 2975,
-        'cpu_time_min': 75.31,
+        'cpu_time_min': 154.75,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.14,
     },
     'instance7': {
         'name': 'I7-320',
-        'flights': 2520,
+        'num_pairings': 1648,
+        'num_pilots': 305,
         'lp_ip_gap': 0.37,
         'bnp_nodes': 195,
         'cg_iterations': 4011,
-        'cpu_time_min': 184.76,
+        'cpu_time_min': 289.22,  # Table 2: CPU time (pairing)
         'uncovered_pct': 0.86,
     },
 }
