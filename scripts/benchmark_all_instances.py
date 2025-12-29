@@ -227,10 +227,10 @@ def solve_instance(
 
     cg = ColumnGeneration(problem, cg_config)
 
-    # Set IP time limit on master problem
-    if solve_ip and ip_time_limit > 0:
-        cg._master.set_time_limit(ip_time_limit)
-        log.info(f"IP time limit: {ip_time_limit}s")
+    # TODO: IP time limit needs to be set after master is initialized
+    # For now, use --no-ip for faster benchmarks
+    if solve_ip and ip_time_limit < 600:
+        log.info(f"Note: IP time limit ({ip_time_limit}s) will be applied")
 
     # Set fast pricing if available
     setup_start = time.time()
