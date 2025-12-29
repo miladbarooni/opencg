@@ -23,20 +23,16 @@ Usage:
 
 # Try to import the C++ extension
 try:
+    from opencg._core._core import HAS_BOOST as _HAS_BOOST
     from opencg._core._core import (
         Arc,
-        # Label types
         Label,
-        # Labeling algorithm
         LabelingAlgorithm,
         LabelingConfig,
         LabelingResult,
         LabelPool,
-        # Network types
         Network,
         Node,
-        # Check if Boost is available
-        HAS_BOOST as _HAS_BOOST,
     )
     HAS_CPP_BACKEND = True
     HAS_BOOST = _HAS_BOOST

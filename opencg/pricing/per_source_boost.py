@@ -34,7 +34,11 @@ from opencg.pricing.base import (
 
 # Try to import Boost SPPRC solver
 try:
-    from opencg._core import HAS_CPP_BACKEND, HAS_BOOST, BoostSPPRCSolver
+    from opencg._core import (
+        HAS_BOOST,
+        HAS_CPP_BACKEND,
+        BoostSPPRCSolver,
+    )
 except ImportError:
     HAS_CPP_BACKEND = False
     HAS_BOOST = False
