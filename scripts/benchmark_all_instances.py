@@ -384,6 +384,30 @@ def solve_instance(
             speedup_factor = 1.0 / slowdown
             log.info(f"  [SLOWER] {slowdown:.1f}x slower than literature")
 
+    # Extract iteration history for detailed analysis
+    iteration_history = []
+    if solution.iteration_history:
+        for it in solution.iteration_history:
+            iteration_history.append({
+                'iteration': it.iteration,
+                'objective': it.master_objective,
+                'best_reduced_cost': it.best_reduced_cost,
+                'columns_added': it.num_columns_added,
+                'total_columns': it.total_columns,
+                'master_time': it.master_time,
+                'pricing_time': it.pricing_time,
+            })
+
+    # Log convergence history
+    if iteration_history:
+        log.info("-" * 70)
+        log.info("CONVERGENCE HISTORY")
+        log.info("-" * 70)
+        log.info(f"{'Iter':<6} {'Objective':>15} {'Best RC':>15} {'Cols':>8} {'Total':>8}")
+        for it in iteration_history:
+            rc_str = f"{it['best_reduced_cost']:.2f}" if it['best_reduced_cost'] else "N/A"
+            log.info(f"{it['iteration']:<6} {it['objective']:>15.2f} {rc_str:>15} {it['columns_added']:>8} {it['total_columns']:>8}")
+
     # Return results dictionary with comprehensive data
     return {
         'instance': instance_name,
@@ -406,8 +430,12 @@ def solve_instance(
         'solve_time_s': solve_time,
         'total_time_s': parse_time + setup_time + solve_time,
         'avg_time_per_iter_s': avg_time_per_iter,
+        'master_time_s': solution.master_time,
+        'pricing_time_s': solution.pricing_time,
         'status': str(solution.status),
         'pricing_type': pricing_type,
+        # Iteration history for detailed analysis
+        'iteration_history': iteration_history,
         # Literature comparison
         'lit_name': lit_name,
         'lit_gap_pct': lit_gap,
